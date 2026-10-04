@@ -8,7 +8,7 @@ Actualmente el proyecto se encuentra en una etapa de **frontend funcional**, uti
 
 ---
 
-https://pin.it/3KojQ8ULD
+![Jinowork Preview](https://i.pinimg.com/1200x/4b/e9/ad/4be9adb79f18c94e1ba8863d64155797.jpg)
 
 ---
 
