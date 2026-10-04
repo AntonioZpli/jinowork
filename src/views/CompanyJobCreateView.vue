@@ -3,10 +3,12 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useJobs } from '@/controllers/useJobs'
+import { useUiStore } from '@/stores/useUiStore'
 import { DEPARTMENTS, EDUCATION_REQUIREMENTS, EMPLOYMENT_TYPES, MUNICIPALITIES_BY_DEPARTMENT, PROFESSIONAL_AREAS, WORK_MODALITIES } from '@/data/professionalTaxonomy'
 import type { JobContract, JobModality } from '@/models/Job'
 
 const auth = useAuthStore()
+const ui = useUiStore()
 const router = useRouter()
 const { addJob } = useJobs()
 const areas = PROFESSIONAL_AREAS
@@ -37,6 +39,7 @@ function publish() {
     modality: form.modality, contract: form.contract, salary: form.salary.trim() || null,
     description: form.description.trim(),
   })
+  ui.notifySuccess('Oferta publicada', 'La vacante ya está disponible para candidatos.')
   router.push({ name: 'company-jobs', query: { creada: job.id } })
 }
 </script>

@@ -50,7 +50,7 @@ const router = createRouter({
     { path: '/empresa/ofertas/nueva', name: 'company-job-create', component: CompanyJobCreateView, meta: { requiresAuth: true, requiresCompany: true } },
     { path: '/empresa/postulantes', name: 'company-applicants', component: CompanyApplicantsView, meta: { requiresAuth: true, requiresCompany: true } },
     { path: '/empresa/perfiles', name: 'candidate-directory', component: CandidateDirectoryView, meta: { requiresAuth: true, requiresCompany: true } },
-    { path: '/empresa/perfiles/:id', name: 'candidate-profile', component: CandidateDirectoryView, meta: { requiresAuth: true, requiresCompany: true } },
+    { path: '/empresa/perfiles/:id', name: 'candidate-profile', component: ProfileView, props: route => ({ readOnly: true, profileUserId: Number(route.params.id) }), meta: { requiresAuth: true, requiresCompany: true } },
     {
       path: '/empleos',
       name: 'jobs',

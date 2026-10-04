@@ -10,8 +10,6 @@ import {
   PhBuildings,
   PhList,
   PhX,
-  PhSun,
-  PhMoon,
   PhSignOut,
   PhCaretDown,
 } from '@phosphor-icons/vue'
@@ -122,21 +120,6 @@ function handleLogout() {
 
         <!-- Right actions -->
         <div class="hidden md:flex items-center gap-2">
-          <!-- Theme toggle -->
-          <button
-            @click="theme.toggle()"
-            class="p-2 rounded-md transition-colors"
-            :class="
-              theme.theme === 'dark'
-                ? 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-white/5'
-                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-            "
-            :title="theme.theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'"
-          >
-            <PhSun v-if="theme.theme === 'dark'" :size="17" weight="regular" />
-            <PhMoon v-else :size="17" weight="regular" />
-          </button>
-
           <!-- Auth: unauthenticated -->
           <template v-if="!auth.isAuthenticated">
             <router-link

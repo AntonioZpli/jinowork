@@ -65,7 +65,7 @@ function seniorityClass(seniority: string, dark: boolean) {
     @click="router.push(`/empleos/${job.id}`)"
     @keydown.enter="router.push(`/empleos/${job.id}`)"
     tabindex="0"
-    class="group rounded-xl border p-7 flex flex-col gap-5 transition-all duration-200 cursor-pointer min-h-[300px]"
+    class="group rounded-xl border p-5 flex flex-col gap-4 transition-all duration-200 cursor-pointer min-h-[260px]"
     :class="
       theme.theme === 'dark'
         ? 'bg-[#151A27] border-[#242C3D] hover:border-[#3B82F6]/50'
@@ -76,7 +76,7 @@ function seniorityClass(seniority: string, dark: boolean) {
     <div class="flex items-start gap-3">
       <!-- Company initials logo -->
       <div
-        class="w-13 h-13 rounded-md flex items-center justify-center text-white text-base font-bold flex-shrink-0"
+        class="w-12 h-12 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
         :style="{ backgroundColor: job.companyColor }"
       >
         {{ job.companyInitials }}
@@ -85,38 +85,27 @@ function seniorityClass(seniority: string, dark: boolean) {
       <!-- Company + title -->
       <div class="flex-1 min-w-0">
         <p
-          class="text-base font-medium mb-1 truncate"
+          class="mb-1 truncate text-sm font-medium"
           :class="theme.theme === 'dark' ? 'text-[#9CA3AF]' : 'text-gray-500'"
         >
           {{ job.company }}
         </p>
         <h3
-          class="font-heading text-xl font-semibold leading-snug"
+          class="font-heading min-h-[2.7rem] text-[1.05rem] font-semibold leading-snug"
           :class="theme.theme === 'dark' ? 'text-[#F3F4F6]' : 'text-gray-900'"
+          style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
         >
           {{ job.title }}
         </h3>
       </div>
 
-      <!-- Featured indicator & Category -->
-      <div class="flex items-center gap-2 flex-shrink-0 mt-1.5">
-        <span v-if="match" class="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-400">{{ match.score }}% de coincidencia</span>
+      <!-- Featured indicator -->
+      <div class="mt-1.5 flex-shrink-0">
         <div
           v-if="job.featured"
-          class="w-2 h-2 rounded-full bg-[#3B82F6]"
+          class="h-2 w-2 rounded-full bg-[#3B82F6]"
           title="Oferta destacada"
         ></div>
-        <span
-          v-if="job.category"
-          class="text-xs px-2 py-0.5 rounded-full border"
-          :class="
-            theme.theme === 'dark'
-              ? 'bg-[#242C3D] text-[#9CA3AF] border-[#3B82F6]/20'
-              : 'bg-gray-100 text-gray-500 border-gray-200'
-          "
-        >
-          {{ job.category }}
-        </span>
       </div>
     </div>
 
