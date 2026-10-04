@@ -8,6 +8,38 @@ import type { JobApplication } from '@/models/Job'
 
 const MOCK_EMAIL = 'yamir@jinowork.com'
 const MOCK_PASSWORD = '1234'
+const PROFILE_STORAGE_PREFIX = 'jinowork-profile-'
+const SESSION_STORAGE_KEY = 'jinowork-demo-session'
+
+function withSavedProfile(user: User): User {
+  try {
+    const saved = localStorage.getItem(`${PROFILE_STORAGE_PREFIX}${user.id}`)
+    return saved ? { ...user, ...JSON.parse(saved) as Partial<User> } : user
+  } catch {
+    return user
+  }
+}
+
+function loadSessionUser(): User | null {
+  try {
+    const session = localStorage.getItem(SESSION_STORAGE_KEY)
+    if (!session) return null
+    const saved = JSON.parse(session) as User
+    const base = saved.id === DEMO_USER.id ? DEMO_USER : saved.id === DEMO_COMPANY_USER.id ? DEMO_COMPANY_USER : saved
+    return withSavedProfile(base)
+  } catch {
+    return null
+  }
+}
+
+function persistSession(user: User | null) {
+  try {
+    if (user) localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user))
+    else localStorage.removeItem(SESSION_STORAGE_KEY)
+  } catch {
+    // Authentication still works for the current tab if storage is unavailable.
+  }
+}
 
 const DEMO_USER: User = {
   id: 1,
@@ -78,8 +110,9 @@ const DEMO_COMPANY_USER: User = {
 }
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref<User | null>(null)
-  const isAuthenticated = ref(false)
+  const initialUser = loadSessionUser()
+  const user = ref<User | null>(initialUser)
+  const isAuthenticated = ref(Boolean(initialUser))
   const authError = ref<string | null>(null)
   const isLoading = ref(false)
   const candidates = ref<User[]>([DEMO_USER])
@@ -106,7 +139,8 @@ export const useAuthStore = defineStore('auth', () => {
     const normalizedEmail = email.trim().toLowerCase()
     
     if (normalizedEmail === DEMO_COMPANY_USER.email && password === MOCK_PASSWORD) {
-      user.value = DEMO_COMPANY_USER
+      user.value = withSavedProfile(DEMO_COMPANY_USER)
+      persistSession(user.value)
       isAuthenticated.value = true
       isLoading.value = false
       return true
@@ -115,7 +149,9 @@ export const useAuthStore = defineStore('auth', () => {
     const isValidUser = (normalizedEmail === MOCK_EMAIL || normalizedEmail.startsWith('yamir')) && password === MOCK_PASSWORD
 
     if (isValidUser) {
-      user.value = DEMO_USER
+      user.value = withSavedProfile(DEMO_USER)
+      persistSession(user.value)
+      candidates.value = candidates.value.map(candidate => candidate.id === user.value?.id ? user.value : candidate)
       isAuthenticated.value = true
       isLoading.value = false
       return true
@@ -151,6 +187,7 @@ export const useAuthStore = defineStore('auth', () => {
       education: [],
       languages: []
     }
+    persistSession(user.value)
     if (data.role === 'candidate' && user.value) candidates.value = [...candidates.value, user.value]
     
     isAuthenticated.value = true
@@ -162,6 +199,7 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     isAuthenticated.value = false
     authError.value = null
+    persistSession(null)
   }
 
   function clearError() {
@@ -172,8 +210,15 @@ export const useAuthStore = defineStore('auth', () => {
     if (user.value) {
       const updatedUser = { ...user.value, ...updates }
       user.value = updatedUser
+      persistSession(updatedUser)
       if (updatedUser.role === 'candidate') {
         candidates.value = candidates.value.map(candidate => candidate.id === updatedUser.id ? updatedUser : candidate)
+      }
+      try {
+        const { id: _id, role: _role, ...profile } = updatedUser
+        localStorage.setItem(`${PROFILE_STORAGE_PREFIX}${updatedUser.id}`, JSON.stringify(profile))
+      } catch {
+        // The in-memory Pinia profile remains updated if browser storage is unavailable.
       }
     }
   }
