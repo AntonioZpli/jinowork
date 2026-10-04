@@ -6,10 +6,48 @@ import {
   PhBriefcase,
   PhUserCircle,
   PhCoffee,
+  PhMapPin,
+  PhShieldCheck,
+  PhChartLine,
+  PhBuildings,
+  PhCode,
 } from '@phosphor-icons/vue'
 
 const theme = useThemeStore()
 const router = useRouter()
+
+const features = [
+  {
+    icon: PhMapPin,
+    title: 'Desde Jinotega para el Mundo',
+    desc: 'Conectamos a profesionales de Jinotega, Matagalpa, Estelí y Managua con empleos remotos y presenciales.',
+  },
+  {
+    icon: PhCoffee,
+    title: 'AgroTech & Sector Cafetalero',
+    desc: 'Software para trazabilidad de cosechas, subastas de microlotes y digitalización de cooperativas agrícolas.',
+  },
+  {
+    icon: PhChartLine,
+    title: 'Salarios en USD y Córdobas',
+    desc: 'Claridad en las propuestas económicas con rangos remunerados en dólares (USD) o córdobas nicaragüenses (NIO).',
+  },
+  {
+    icon: PhBuildings,
+    title: 'Empresas & Cooperativas',
+    desc: 'Posiciones en firmas de tecnología, entidades financieras de Nicaragua y empresas exportadoras.',
+  },
+  {
+    icon: PhShieldCheck,
+    title: 'Procesos Verificados',
+    desc: 'Ofertas revisadas con condiciones transparentes, sin ofertas dudosas ni intermediarios opacos.',
+  },
+  {
+    icon: PhCode,
+    title: 'Oportunidades para todos',
+    desc: 'Vacantes en tecnología, educación, agricultura, administración, ventas, finanzas y muchos otros sectores.',
+  },
+]
 </script>
 
 <template>
@@ -20,18 +58,7 @@ const router = useRouter()
     <!-- ── Hero ──────────────────────────────────────────────────────── -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 pb-16">
       <div class="max-w-3xl">
-        <!-- Label -->
-        <div
-          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs font-semibold mb-8 tracking-wide uppercase"
-          :class="
-            theme.theme === 'dark'
-              ? 'border-[#242C3D] text-[#9CA3AF] bg-[#151A27]'
-              : 'border-gray-200 text-gray-500 bg-white'
-          "
-        >
-          <PhCoffee :size="13" weight="bold" class="text-amber-500" />
-          Oportunidades para todo tipo de talento · Nicaragua 🇳🇮
-        </div>
+        <!-- removed redundant hero label for simplified design -->
 
         <!-- Headline -->
         <h1
@@ -172,12 +199,6 @@ const router = useRouter()
           </div>
         </div>
         <div class="flex-1 hidden lg:block"></div>
-        <div
-          class="text-xs"
-          :class="theme.theme === 'dark' ? 'text-[#9CA3AF]' : 'text-gray-400'"
-        >
-          +4,500 profesionales · +180 empresas · Jinotega y toda Nicaragua
-        </div>
       </div>
     </section>
 
@@ -221,16 +242,16 @@ const router = useRouter()
                   : 'border-blue-100 bg-blue-50 text-[#3B82F6]'
               "
             >
-              <component :is="feature.icon" :size="17" weight="regular" />
+              <component :is="feature.icon" :size="20" weight="regular" />
             </div>
             <h3
-              class="font-semibold text-sm mb-1.5"
+              class="font-semibold text-base mb-1.5"
               :class="theme.theme === 'dark' ? 'text-[#F3F4F6]' : 'text-gray-900'"
             >
               {{ feature.title }}
             </h3>
             <p
-              class="text-xs leading-relaxed"
+              class="text-sm leading-relaxed"
               :class="theme.theme === 'dark' ? 'text-[#9CA3AF]' : 'text-gray-500'"
             >
               {{ feature.desc }}
@@ -241,53 +262,3 @@ const router = useRouter()
     </section>
   </div>
 </template>
-
-<script lang="ts">
-import {
-  PhMapPin,
-  PhShieldCheck,
-  PhChartLine,
-  PhCoffee,
-  PhBuildings,
-  PhCode,
-} from '@phosphor-icons/vue'
-
-export default {
-  data() {
-    return {
-      features: [
-        {
-          icon: PhMapPin,
-          title: 'Desde Jinotega para el Mundo',
-          desc: 'Conectamos a profesionales de Jinotega, Matagalpa, Estelí y Managua con empleos remotos y presenciales.',
-        },
-        {
-          icon: PhCoffee,
-          title: 'AgroTech & Sector Cafetalero',
-          desc: 'Software para trazabilidad de cosechas, subastas de microlotes y digitalización de cooperativas agrícolas.',
-        },
-        {
-          icon: PhChartLine,
-          title: 'Salarios en USD y Córdobas',
-          desc: 'Claridad en las propuestas económicas con rangos remunerados en dólares (USD) o córdobas nicaragüenses (NIO).',
-        },
-        {
-          icon: PhBuildings,
-          title: 'Empresas & Cooperativas',
-          desc: 'Posiciones en firmas de tecnología, entidades financieras de Nicaragua y empresas exportadoras.',
-        },
-        {
-          icon: PhShieldCheck,
-          title: 'Procesos Verificados',
-          desc: 'Ofertas revisadas con condiciones transparentes, sin ofertas dudosas ni intermediarios opacos.',
-        },
-        {
-          icon: PhCode,
-          title: 'Oportunidades para todos',
-          desc: 'Vacantes en tecnología, educación, agricultura, administración, ventas, finanzas y muchos otros sectores.',
-        },
-      ],
-    }
-  },
-}
-</script>

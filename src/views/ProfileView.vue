@@ -1,465 +1,362 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
-import { useThemeStore } from '@/stores/useThemeStore'
+import { computed, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useJobs } from '@/controllers/useJobs'
+import { PROFESSIONAL_AREAS, MUNICIPALITIES_BY_DEPARTMENT, DEPARTMENTS, EMPLOYMENT_TYPES, WORK_MODALITIES, SKILL_LEVELS, COMPANY_SIZES, COMPANY_SECTORS, ORGANIZATION_TYPES } from '@/data/professionalTaxonomy'
+import { calculateProfileCompletion } from '@/services/jobMatching'
+import type { UserEducation, UserExperience } from '@/models/User'
+import { EDUCATION_REQUIREMENTS } from '@/data/professionalTaxonomy'
 import {
-  PhMapPin,
-  PhCheckCircle,
-  PhBuildings,
-  PhCalendarBlank,
-  PhTranslate,
-  PhTerminal,
-  PhCode,
-  PhGraduationCap,
-  PhCpu,
+  PhMapPin, PhBriefcase, PhGraduationCap, PhEnvelope, PhPhone,
+  PhGlobe, PhPencilSimple, PhPlus, PhX, PhCheck, PhBuildings,
+  PhUsersThree, PhArrowUpRight, PhSparkle, PhCalendarBlank, PhMagnifyingGlass,
 } from '@phosphor-icons/vue'
 
-const theme = useThemeStore()
 const auth = useAuthStore()
-const { allJobs } = useJobs()
-
+const route = useRoute()
+const router = useRouter()
+const { allJobs, categories } = useJobs()
+const interestCategories = computed(() => PROFESSIONAL_AREAS.map(area => area.name))
 const user = computed(() => auth.user)
-const editing = ref(false)
-const profileDraft = reactive({ name: '', title: '', location: '', about: '', skills: '' })
-const appliedJobs = computed(() => {
-  return allJobs.filter((job) => auth.applications.includes(job.id))
+const isCompany = computed(() => user.value?.role === 'company')
+const isEditing = computed(() => route.name === 'profile-edit')
+function goToEdit() { syncForm(); router.push({ name: 'profile-edit' }) }
+const activeTab = ref('Perfil')
+const saveMessage = ref('')
+const errors = ref<Record<string, string>>({})
+const appliedJobs = computed(() => allJobs.value.filter(job => auth.applications.includes(job.id)))
+function applicationStatus(jobId: number) {
+  const status = auth.applicationRecords.find(record => record.jobId === jobId && record.candidateId === user.value?.id)?.status
+  return ({ submitted: 'Recibida', reviewing: 'En revisión', shortlisted: 'Preseleccionada', rejected: 'No seleccionada', accepted: 'Seleccionada' } as Record<string, string>)[status || 'submitted']
+}
+const companyJobs = computed(() => allJobs.value.filter(job => job.ownerId === user.value?.id))
+const companyApplications = computed(() => auth.applicationRecords.filter(record => companyJobs.value.some(job => job.id === record.jobId)))
+const companyRecruitingAreas = computed(() => PROFESSIONAL_AREAS.filter(area => user.value?.recruitingAreaIds?.includes(area.id)))
+const profileCompletion = computed(() => user.value ? calculateProfileCompletion(user.value) : null)
+const companyProfileCompletion = computed(() => {
+  const checks = [
+    Boolean(user.value?.companyName), Boolean(user.value?.industry), Boolean(user.value?.companySize),
+    Boolean(user.value?.location || user.value?.department), Boolean(user.value?.about),
+    Boolean(user.value?.website), Boolean(user.value?.organizationType), Boolean(user.value?.recruitingAreaIds?.length),
+  ]
+  return Math.round(checks.filter(Boolean).length / checks.length * 100)
 })
-function editProfile() {
-  Object.assign(profileDraft, { name: user.value?.name ?? '', title: user.value?.title ?? '', location: user.value?.location ?? '', about: user.value?.about ?? '', skills: user.value?.skills.join(', ') ?? '' })
-  editing.value = true
+const profileArea = computed(() => PROFESSIONAL_AREAS.find(area => area.id === form.professionalAreaId))
+const profileSpecializations = computed(() => profileArea.value?.specializations || [])
+const secondaryAreas = computed(() => PROFESSIONAL_AREAS.filter(area => area.id !== form.professionalAreaId))
+const profileSkills = computed(() => profileSpecializations.value.filter(item => form.specializationIds.includes(item.id)).flatMap(item => item.skills))
+const selectedProfileSkills = computed(() => profileSkills.value.filter(skill => form.skillIds.includes(skill.id)))
+const profileSkillLabels = computed(() => {
+  const structured = PROFESSIONAL_AREAS.flatMap(area => area.specializations).flatMap(item => item.skills).filter(skill => user.value?.skillIds?.includes(skill.id)).map(skill => skill.name)
+  return structured.length ? structured : user.value?.skills || []
+})
+const profileMunicipalities = computed(() => MUNICIPALITIES_BY_DEPARTMENT[form.department] || [])
+const educationYears = computed(() => Array.from({ length: 60 }, (_, index) => String(new Date().getFullYear() + 8 - index)))
+const studySpecializations = computed(() => profileArea.value?.specializations || PROFESSIONAL_AREAS.flatMap(area => area.specializations))
+function isCustomEducationLevel(level: string) { return Boolean(level) && !EDUCATION_REQUIREMENTS.some(option => option === level) }
+const tabs = ['Perfil', 'Experiencia', 'Educación', 'Preferencias']
+const industries = COMPANY_SECTORS
+const companySizes = COMPANY_SIZES
+const modalities = WORK_MODALITIES
+const technologySkills = [
+  { name: 'JavaScript', icon: 'javascript' }, { name: 'TypeScript', icon: 'typescript' },
+  { name: 'Vue.js', icon: 'vuejs' }, { name: 'React', icon: 'react' }, { name: 'Node.js', icon: 'nodejs' },
+  { name: 'Python', icon: 'python' }, { name: 'Go', icon: 'go' }, { name: 'Java', icon: 'java' },
+  { name: 'PHP', icon: 'php' }, { name: 'C++', icon: 'cplusplus' }, { name: 'Linux', icon: 'linux' },
+  { name: 'Docker', icon: 'docker' }, { name: 'Kubernetes', icon: 'kubernetes' }, { name: 'Git', icon: 'git' },
+  { name: 'PostgreSQL', icon: 'postgresql' }, { name: 'MySQL', icon: 'mysql' }, { name: 'Redis', icon: 'redis' },
+  { name: 'MongoDB', icon: 'mongodb' }, { name: 'AWS', icon: 'amazonwebservices' }, { name: 'Azure', icon: 'azure' },
+  { name: 'Figma', icon: 'figma' }, { name: 'HTML5', icon: 'html5' }, { name: 'CSS3', icon: 'css3' },
+  { name: 'Bash', icon: 'bash' }, { name: 'NGINX', icon: 'nginx' },
+]
+
+function skillIcon(skill: string) {
+  const match = technologySkills.find(item => item.name.toLowerCase() === skill.toLowerCase())
+  return match ? `https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${match.icon}/${match.icon}-original.svg` : ''
+}
+
+const form = reactive({
+  name: '', title: '', email: '', phone: '', location: '', website: '', about: '',
+  skills: [] as string[], preferredModality: 'Remoto', preferredCategories: [] as string[],
+  available: false, companyName: '', industry: '', companySize: '',
+  professionalAreaId: '', secondaryAreaIds: [] as string[], specializationIds: [] as string[], skillIds: [] as string[],
+  skillLevels: {} as Record<string, 'Básico' | 'Intermedio' | 'Avanzado'>, experienceYears: 0,
+  preferredEmploymentTypes: [] as string[], preferredLocations: [] as string[], department: '', municipality: '',
+  recruitingAreaIds: [] as string[], organizationType: '',
+  experience: [] as UserExperience[], education: [] as UserEducation[],
+})
+
+function syncForm() {
+  const u = user.value
+  if (!u) return
+  Object.assign(form, {
+    name: u.name || '', title: u.title || '', email: u.email || '', phone: u.phone || '',
+    location: u.location || '', website: u.website || '', about: u.about || '',
+    skills: [...(u.skills || [])], preferredModality: u.preferredModality || 'Remoto',
+    preferredCategories: [...(u.preferredCategories || [])], available: !!u.available,
+    companyName: u.companyName || '', industry: u.industry || '', companySize: u.companySize || '',
+    professionalAreaId: u.professionalAreaId || '', secondaryAreaIds: [...(u.secondaryAreaIds || [])],
+    specializationIds: [...(u.specializationIds || [])], skillIds: [...(u.skillIds || [])],
+    skillLevels: { ...(u.skillLevels || {}) }, experienceYears: u.experienceYears || 0,
+    preferredEmploymentTypes: [...(u.preferredEmploymentTypes || [])], preferredLocations: [...(u.preferredLocations || [])],
+    department: u.department || '', municipality: u.municipality || '', recruitingAreaIds: [...(u.recruitingAreaIds || [])],
+    organizationType: u.organizationType || '',
+    experience: (u.experience || []).map(item => ({ ...item })), education: (u.education || []).map(item => ({ ...item })),
+  })
+}
+watch(user, syncForm, { immediate: true })
+
+function toggleCategory(category: string) {
+  form.preferredCategories = form.preferredCategories.includes(category)
+    ? form.preferredCategories.filter(item => item !== category)
+    : [...form.preferredCategories, category]
+}
+function toggleList(values: string[], value: string) {
+  return values.includes(value) ? values.filter(item => item !== value) : [...values, value]
+}
+function addExperience() {
+  form.experience.push({ id: Date.now(), title: '', company: '', companyInitials: '', companyColor: '#0284C7', location: form.location, startDate: '', endDate: null, current: true, description: '', areaId: form.professionalAreaId || undefined })
+}
+function addEducation() {
+  form.education.push({ id: Date.now(), degree: '', institution: '', year: String(new Date().getFullYear()), field: '', currentlyStudying: false })
 }
 function saveProfile() {
-  auth.updateProfile({ name: profileDraft.name, title: profileDraft.title, location: profileDraft.location, about: profileDraft.about, skills: profileDraft.skills.split(',').map((skill) => skill.trim()).filter(Boolean) })
-  editing.value = false
+  errors.value = {}
+  if (isCompany.value) {
+    if (!form.companyName.trim()) errors.value.companyName = 'Indica el nombre de tu empresa.'
+    if (!form.industry) errors.value.industry = 'Selecciona el sector de actividad.'
+  } else {
+    if (form.name.trim().length < 2) errors.value.name = 'Escribe tu nombre completo.'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.value.email = 'Revisa el formato del correo.'
+  }
+  if (Object.keys(errors.value).length) return
+  const commonProfile = {
+    name: form.name, email: form.email, phone: form.phone,
+    location: form.municipality && form.department ? `${form.municipality}, ${form.department}` : form.location,
+    department: form.department || undefined, municipality: form.municipality || undefined,
+    website: form.website, about: form.about,
+  }
+  auth.updateProfile(isCompany.value
+    ? { ...commonProfile, title: form.title, companyName: form.companyName, industry: form.industry, companySize: form.companySize, organizationType: form.organizationType, recruitingAreaIds: [...form.recruitingAreaIds] }
+    : {
+        ...commonProfile,
+        title: form.title,
+        skills: [...new Set([...form.skillIds.map(id => profileSkills.value.find(skill => skill.id === id)?.name).filter((name): name is string => Boolean(name)), ...form.skills])],
+        professionalAreaId: form.professionalAreaId || undefined,
+        secondaryAreaIds: [...form.secondaryAreaIds], specializationIds: [...form.specializationIds],
+        skillIds: [...form.skillIds], skillLevels: { ...form.skillLevels }, experienceYears: Number(form.experienceYears),
+        department: form.department || undefined, municipality: form.municipality || undefined,
+        preferredLocations: [...form.preferredLocations], preferredEmploymentTypes: [...form.preferredEmploymentTypes],
+        preferredModality: form.preferredModality as 'Remoto' | 'Presencial' | 'Híbrido',
+        preferredCategories: [...form.preferredCategories],
+        available: form.available,
+        experience: form.experience.filter(item => item.title.trim() && item.company.trim()).map(item => ({ ...item, companyInitials: item.company.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase() })),
+        education: form.education.filter(item => item.degree && item.institution.trim()),
+      })
+  router.push({ name: 'profile' })
+  activeTab.value = 'Perfil'
+  saveMessage.value = 'Cambios guardados correctamente'
+  window.setTimeout(() => (saveMessage.value = ''), 3200)
 }
-
-// Markdown Badges from https://github.com/ileriayo/markdown-badges (for-the-badge style)
-const markdownBadges: Record<string, string> = {
-  'Linux': 'https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black',
-  'Terminal': 'https://img.shields.io/badge/Terminal-%234D4D4D.svg?style=for-the-badge&logo=windows-terminal&logoColor=white',
-  'Bash': 'https://img.shields.io/badge/Bash-4EAA25?style=for-the-badge&logo=gnu-bash&logoColor=white',
-  'Neovim': 'https://img.shields.io/badge/NeoVim-%2357A143.svg?style=for-the-badge&logo=neovim&logoColor=white',
-  'Docker': 'https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white',
-  'Go': 'https://img.shields.io/badge/go-%2300ADD8.svg?style=for-the-badge&logo=go&logoColor=white',
-  'Python': 'https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54',
-  'Node.js': 'https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white',
-  'PostgreSQL': 'https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white',
-  'Redis': 'https://img.shields.io/badge/redis-%23DD0031.svg?style=for-the-badge&logo=redis&logoColor=white',
-  'NGINX': 'https://img.shields.io/badge/nginx-%23009639.svg?style=for-the-badge&logo=nginx&logoColor=white',
-  'Git': 'https://img.shields.io/badge/git-%23F05033.svg?style=for-the-badge&logo=git&logoColor=white',
-  'Kubernetes': 'https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=for-the-badge&logo=kubernetes&logoColor=white',
-  'Rust': 'https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white',
-  'Vue.js': 'https://img.shields.io/badge/vuejs-%2335495e.svg?style=for-the-badge&logo=vuedotjs&logoColor=%234FC08D',
-  'TypeScript': 'https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white',
-  'JavaScript': 'https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E',
-  'Tailwind CSS': 'https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white',
-  'AWS': 'https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white',
-}
-
-// Language level color mapping
-const levelColors: Record<string, string> = {
-  Nativo: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
-  Avanzado: 'bg-blue-500/15 text-blue-400 border-blue-500/25',
-  Intermedio: 'bg-amber-500/15 text-amber-400 border-amber-500/25',
-  Básico: 'bg-gray-500/15 text-gray-400 border-gray-500/25',
-}
-
-const levelColorsLight: Record<string, string> = {
-  Nativo: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  Avanzado: 'bg-blue-50 text-blue-700 border-blue-200',
-  Intermedio: 'bg-amber-50 text-amber-700 border-amber-200',
-  Básico: 'bg-gray-50 text-gray-600 border-gray-200',
+function cancelEdit() {
+  syncForm()
+  errors.value = {}
+  router.push({ name: 'profile' })
+  activeTab.value = 'Perfil'
 }
 </script>
 
 <template>
-  <div
-    class="min-h-screen"
-    :class="theme.theme === 'dark' ? 'bg-[#0B0F19]' : 'bg-[#FAFAFA]'"
-  >
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+  <main class="profile-page" :class="{ 'editing-page': isEditing }">
+    <div class="profile-shell">
+      <div v-if="saveMessage" class="notice"><PhCheck :size="18" weight="bold" />{{ saveMessage }}</div>
 
-      <div class="flex justify-end mb-4"><button @click="editProfile" class="btn-outline text-sm">Editar perfil</button></div>
-      <form v-if="editing" @submit.prevent="saveProfile" class="rounded-xl border p-6 sm:p-8 mb-6 grid sm:grid-cols-2 gap-4" :class="theme.theme === 'dark' ? 'bg-[#151A27] border-[#242C3D]' : 'bg-white border-gray-200'">
-        <label class="text-sm font-semibold">Nombre<input v-model="profileDraft.name" required class="input-field mt-2" /></label>
-        <label class="text-sm font-semibold">Título profesional<input v-model="profileDraft.title" required class="input-field mt-2" /></label>
-        <label class="text-sm font-semibold">Ubicación<input v-model="profileDraft.location" class="input-field mt-2" /></label>
-        <label class="text-sm font-semibold">Habilidades (separadas por coma)<input v-model="profileDraft.skills" class="input-field mt-2" /></label>
-        <label class="text-sm font-semibold sm:col-span-2">Sobre mí<textarea v-model="profileDraft.about" rows="4" class="input-field mt-2" /></label>
-        <div class="sm:col-span-2 flex justify-end gap-3"><button type="button" @click="editing = false" class="btn-outline">Cancelar</button><button type="submit" class="btn-primary">Guardar cambios</button></div>
-      </form>
-
-      <!-- ── Profile Header Card (SIN BANNER, FOTO REDONDA) ─────────────── -->
-      <div
-        class="rounded-lg border p-6 sm:p-8 mb-6"
-        :class="
-          theme.theme === 'dark'
-            ? 'bg-[#151A27] border-[#242C3D]'
-            : 'bg-white border-gray-200'
-        "
-      >
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-          <div class="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-5 sm:gap-6 w-full sm:w-auto">
-            <!-- Foto Redonda (Circular Avatar) -->
-            <div
-              class="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 bg-[#3B82F6] flex items-center justify-center text-white font-heading text-4xl font-bold flex-shrink-0 shadow-md overflow-hidden relative"
-              :class="
-                theme.theme === 'dark'
-                  ? 'border-[#242C3D]'
-                  : 'border-blue-100'
-              "
-            >
-              <img
-                v-if="user?.avatar"
-                :src="user.avatar"
-                :alt="user.name"
-                class="w-full h-full object-cover rounded-full"
-                loading="eager"
-              />
-              <span v-else>{{ user?.name?.charAt(0) }}</span>
+      <template v-if="isCompany">
+        <section class="company-hero panel">
+          <div class="company-cover"><span class="cover-orbit orbit-one"></span><span class="cover-orbit orbit-two"></span><span class="cover-label">JINOWORK · EMPRESAS</span></div>
+          <div class="company-heading">
+            <div class="company-mark"><PhBuildings :size="36" weight="duotone" /></div>
+            <div class="company-intro">
+              <span class="eyebrow">Perfil de empresa</span>
+              <h1>{{ user?.companyName || 'Tu empresa' }}</h1>
+              <p>{{ user?.industry || 'Agrega el sector de tu empresa' }}<span v-if="user?.location"> · {{ user.location }}</span></p>
             </div>
-
-            <!-- Profile metadata -->
-            <div class="space-y-1.5 flex-1 min-w-0">
-              <div class="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
-                <h1
-                  class="font-heading text-2xl sm:text-3xl font-bold tracking-tight"
-                  :class="theme.theme === 'dark' ? 'text-[#F3F4F6]' : 'text-gray-900'"
-                >
-                  {{ user?.name }}
-                </h1>
-                <!-- Jinotega & Linux Badge -->
-                <span
-                  class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-semibold border"
-                  :class="
-                    theme.theme === 'dark'
-                      ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
-                      : 'bg-blue-50 border-blue-200 text-blue-700'
-                  "
-                >
-                  <PhTerminal :size="12" weight="bold" />
-                  Perfil profesional
-                </span>
-              </div>
-
-              <p
-                class="text-sm font-medium"
-                :class="theme.theme === 'dark' ? 'text-[#3B82F6]' : 'text-[#3B82F6]'"
-              >
-                {{ user?.title }}
-              </p>
-
-              <div
-                class="flex items-center justify-center sm:justify-start gap-2 text-xs flex-wrap"
-                :class="theme.theme === 'dark' ? 'text-[#9CA3AF]' : 'text-gray-500'"
-              >
-                <div class="flex items-center gap-1">
-                  <PhMapPin :size="14" />
-                  <span>{{ user?.location }}</span>
-                </div>
-                <span>·</span>
-                <span class="text-xs font-medium text-emerald-500">Talento Verificado Nica 🇳🇮</span>
-              </div>
-            </div>
+            <button class="button button-primary company-edit" @click="goToEdit(); activeTab = 'Perfil'"><PhPencilSimple :size="17" />Editar empresa</button>
           </div>
-
-          <!-- Availability badge -->
-          <div class="w-full sm:w-auto flex justify-center sm:justify-end flex-shrink-0">
-            <div
-              v-if="user?.available"
-              class="inline-flex items-center gap-2 px-3.5 py-2 rounded-md border text-xs font-semibold"
-              :class="
-                theme.theme === 'dark'
-                  ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
-                  : 'bg-emerald-50 border-emerald-200 text-emerald-700'
-              "
-            >
-              <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-              Disponible para contratación
-            </div>
+          <div class="company-meta">
+            <span v-if="user?.companySize"><PhUsersThree :size="17" />{{ user.companySize }} colaboradores</span><span v-if="user?.organizationType">{{ user.organizationType }}</span>
+            <a v-if="user?.website" :href="user.website" target="_blank" rel="noreferrer"><PhGlobe :size="17" />{{ user.website }}<PhArrowUpRight :size="14" /></a>
+            <span><PhEnvelope :size="17" />{{ user?.email }}</span>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <!-- ── Two-column layout ───────────────────────────────────── -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        <!-- Left column (1/3) -->
-        <div class="space-y-5">
-
-          <!-- Sobre mí -->
-          <div
-            class="rounded-lg border p-5"
-            :class="
-              theme.theme === 'dark'
-                ? 'bg-[#151A27] border-[#242C3D]'
-                : 'bg-white border-gray-200'
-            "
-          >
-            <h2
-              class="font-heading text-sm font-semibold tracking-tight mb-3 flex items-center gap-1.5"
-              :class="theme.theme === 'dark' ? 'text-[#F3F4F6]' : 'text-gray-900'"
-            >
-              <PhCpu :size="14" />
-              Sobre mí
-            </h2>
-            <p
-              class="text-xs leading-relaxed"
-              :class="theme.theme === 'dark' ? 'text-[#9CA3AF]' : 'text-gray-600'"
-            >
-              {{ user?.about }}
-            </p>
-          </div>
-
-          <!-- Habilidades (Markdown Badges https://github.com/ileriayo/markdown-badges) -->
-          <div
-            class="rounded-lg border p-5"
-            :class="
-              theme.theme === 'dark'
-                ? 'bg-[#151A27] border-[#242C3D]'
-                : 'bg-white border-gray-200'
-            "
-          >
-            <div class="flex items-center justify-between mb-3.5">
-              <h2
-                class="font-heading text-sm font-semibold tracking-tight flex items-center gap-1.5"
-                :class="theme.theme === 'dark' ? 'text-[#F3F4F6]' : 'text-gray-900'"
-              >
-                <PhCode :size="14" />
-                Habilidades
-              </h2>
-              <span
-                class="text-[10px] font-mono"
-                :class="theme.theme === 'dark' ? 'text-[#9CA3AF]' : 'text-gray-400'"
-              >
-                markdown-badges
-              </span>
-            </div>
-
-            <!-- List of markdown badges from https://github.com/ileriayo/markdown-badges -->
-            <div class="flex flex-wrap gap-2">
-              <template v-for="skill in user?.skills" :key="skill">
-                <img
-                  v-if="markdownBadges[skill]"
-                  :src="markdownBadges[skill]"
-                  :alt="skill"
-                  class="h-[26px] rounded hover:opacity-90 transition-transform duration-150 hover:scale-105 shadow-sm"
-                  loading="lazy"
-                />
-                <span
-                  v-else
-                  class="tag-pill"
-                >
-                  {{ skill }}
-                </span>
-              </template>
-            </div>
-          </div>
-
-          <!-- Idiomas -->
-          <div
-            class="rounded-lg border p-5"
-            :class="
-              theme.theme === 'dark'
-                ? 'bg-[#151A27] border-[#242C3D]'
-                : 'bg-white border-gray-200'
-            "
-          >
-            <h2
-              class="font-heading text-sm font-semibold tracking-tight mb-3 flex items-center gap-1.5"
-              :class="theme.theme === 'dark' ? 'text-[#F3F4F6]' : 'text-gray-900'"
-            >
-              <PhTranslate :size="14" />
-              Idiomas
-            </h2>
-            <div class="space-y-2.5">
-              <div
-                v-for="lang in user?.languages"
-                :key="lang.id"
-                class="flex items-center justify-between"
-              >
-                <span
-                  class="text-xs font-medium"
-                  :class="theme.theme === 'dark' ? 'text-[#F3F4F6]' : 'text-gray-800'"
-                >
-                  {{ lang.language }}
-                </span>
-                <span
-                  class="text-xs px-2 py-0.5 rounded border font-medium"
-                  :class="
-                    theme.theme === 'dark'
-                      ? levelColors[lang.level]
-                      : levelColorsLight[lang.level]
-                  "
-                >
-                  {{ lang.level }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Educación -->
-          <div
-            class="rounded-lg border p-5"
-            :class="
-              theme.theme === 'dark'
-                ? 'bg-[#151A27] border-[#242C3D]'
-                : 'bg-white border-gray-200'
-            "
-          >
-            <h2
-              class="font-heading text-sm font-semibold tracking-tight mb-3 flex items-center gap-1.5"
-              :class="theme.theme === 'dark' ? 'text-[#F3F4F6]' : 'text-gray-900'"
-            >
-              <PhGraduationCap :size="14" />
-              Educación & Certificaciones
-            </h2>
-            <div class="space-y-4">
-              <div
-                v-for="edu in user?.education"
-                :key="edu.id"
-                class="space-y-0.5"
-              >
-                <p
-                  class="text-xs font-semibold"
-                  :class="theme.theme === 'dark' ? 'text-[#F3F4F6]' : 'text-gray-900'"
-                >
-                  {{ edu.degree }}
-                </p>
-                <p
-                  class="text-xs font-medium"
-                  :class="theme.theme === 'dark' ? 'text-[#3B82F6]' : 'text-blue-600'"
-                >
-                  {{ edu.institution }}
-                </p>
-                <p
-                  class="text-xs"
-                  :class="theme.theme === 'dark' ? 'text-[#9CA3AF]' : 'text-gray-500'"
-                >
-                  {{ edu.field }} · {{ edu.year }}
-                </p>
-              </div>
-            </div>
-          </div>
+        <section v-if="companyProfileCompletion < 100" class="panel content-panel"><div class="flex flex-wrap items-center justify-between gap-4"><div><span class="eyebrow">Perfil de empresa</span><h2>{{ companyProfileCompletion }}% completo</h2><p class="mt-1 text-sm text-gray-400">Completa los datos de tu organización para dar más contexto a quienes buscan empleo.</p></div><button class="button button-secondary" @click="goToEdit">Completar perfil</button></div><div class="mt-4 h-2 overflow-hidden rounded-full bg-[#253247]"><div class="h-full rounded-full bg-emerald-500" :style="{ width: `${companyProfileCompletion}%` }"></div></div></section>
+        <div class="company-layout">
+          <section class="panel content-panel">
+            <div class="section-heading"><div><span class="eyebrow">Quiénes somos</span><h2>Acerca de la empresa</h2></div><button class="icon-button" aria-label="Editar perfil" @click="goToEdit()"><PhPencilSimple :size="17" /></button></div>
+            <p v-if="user?.about" class="body-copy preserve-lines">{{ user.about }}</p>
+            <div v-else class="empty-state"><PhSparkle :size="21" /><p>Cuéntales a los candidatos qué hace especial a tu empresa.</p><button class="text-button" @click="goToEdit()">Completar descripción <PhArrowUpRight :size="15" /></button></div>
+          </section>
+          <aside class="panel content-panel company-contact">
+            <span class="eyebrow">Contacto principal</span><h2>{{ user?.name }}</h2><p>{{ user?.title || 'Representante de empresa' }}</p>
+            <a :href="`mailto:${user?.email}`"><PhEnvelope :size="17" />{{ user?.email }}</a>
+            <a v-if="user?.phone" :href="`tel:${user.phone}`"><PhPhone :size="17" />{{ user.phone }}</a>
+            <button class="button button-secondary full-button" @click="goToEdit()">Actualizar información</button>
+          </aside>
         </div>
 
-        <!-- Right column (2/3) — Experience timeline -->
-        <div class="lg:col-span-2">
-          <div
-            class="rounded-lg border p-5 sm:p-7"
-            :class="
-              theme.theme === 'dark'
-                ? 'bg-[#151A27] border-[#242C3D]'
-                : 'bg-white border-gray-200'
-            "
-          >
-            <div class="flex items-center justify-between mb-6">
-              <h2
-                class="font-heading text-sm font-semibold tracking-tight"
-                :class="theme.theme === 'dark' ? 'text-[#F3F4F6]' : 'text-gray-900'"
-              >
-                Experiencia profesional
-              </h2>
-              <span
-                class="text-xs"
-                :class="theme.theme === 'dark' ? 'text-[#9CA3AF]' : 'text-gray-500'"
-              >
-                Jinotega & Nicaragua
-              </span>
+        <section class="panel content-panel"><div class="section-heading"><div><span class="eyebrow">Áreas de contratación</span><h2>Perfiles que busca la empresa</h2></div><button class="icon-button" aria-label="Editar áreas de contratación" @click="goToEdit()"><PhPencilSimple :size="17" /></button></div><div v-if="companyRecruitingAreas.length" class="category-list"><span v-for="area in companyRecruitingAreas" :key="area.id" class="category-chip">{{ area.name }}</span></div><div v-else class="empty-state"><p>Selecciona las áreas profesionales en las que contrata tu organización.</p><button class="text-button" @click="goToEdit()">Completar áreas</button></div></section><section class="panel content-panel company-next">
+          <div class="company-next-icon"><PhBriefcase :size="23" /></div><div><span class="eyebrow">Tu actividad</span><h2>{{ companyJobs.length }} ofertas · {{ companyApplications.length }} postulaciones</h2><p>Administra tus vacantes y revisa los perfiles de quienes aplicaron.</p></div>
+          <router-link class="button button-secondary" to="/empresa/ofertas">Ver mis ofertas</router-link>
+          <router-link class="button button-secondary" to="/empresa/postulantes">Ver postulantes</router-link>
+          <router-link class="button button-primary" to="/empresa/perfiles">Buscar perfiles</router-link>
+        </section>
+
+        <section v-if="isEditing" class="edit-overlay">
+          <form class="edit-card" @submit.prevent="saveProfile">
+            <div class="edit-header"><div><span class="eyebrow">Configuración</span><h2>Editar empresa</h2></div><button type="button" class="icon-button" aria-label="Volver al panel" @click="cancelEdit"><PhX :size="20" /></button></div>
+            <div class="edit-grid">
+              <label class="field"><span>Nombre de la empresa <i>*</i></span><input v-model="form.companyName" class="control" placeholder="Ej. NicaTech Solutions" /><small v-if="errors.companyName">{{ errors.companyName }}</small></label>
+              <label class="field"><span>Sector <i>*</i></span><select v-model="form.industry" class="control"><option value="">Selecciona un sector</option><option v-for="industry in industries" :key="industry">{{ industry }}</option></select><small v-if="errors.industry">{{ errors.industry }}</small></label>
+              <label class="field"><span>Tamaño de empresa</span><select v-model="form.companySize" class="control"><option value="">Selecciona el tamaño</option><option v-for="size in companySizes" :key="size" :value="size">{{ size }} colaboradores</option></select></label>
+              <label class="field"><span>Ubicación</span><input v-model="form.location" class="control" placeholder="Ciudad, país" /></label>
+              <label class="field"><span>Correo de contacto</span><input v-model="form.email" type="email" class="control" /></label>
+              <label class="field"><span>Teléfono</span><input v-model="form.phone" type="tel" class="control" placeholder="+505 0000 0000" /></label>
+              <label class="field"><span>Sitio web</span><input v-model="form.website" type="url" class="control" placeholder="https://tuempresa.com" /></label>
+              <label class="field"><span>Tipo de organización</span><select v-model="form.organizationType" class="control"><option value="">Selecciona un tipo</option><option v-for="kind in ORGANIZATION_TYPES" :key="kind" :value="kind">{{ kind }}</option></select></label>
+              <div class="field"><span class="field-label">Departamento y municipio</span><div class="edit-grid"><select v-model="form.department" class="control" @change="form.municipality = ''"><option value="">Departamento</option><option v-for="department in DEPARTMENTS" :key="department">{{ department }}</option></select><select v-model="form.municipality" class="control" :disabled="!form.department"><option value="">Municipio</option><option v-for="municipality in profileMunicipalities" :key="municipality">{{ municipality }}</option></select></div></div>
+              <label class="field"><span>Persona de contacto</span><input v-model="form.name" class="control" /></label>
+              <fieldset class="field field-wide"><legend>Áreas en las que contrata</legend><div class="choice-grid"><button v-for="area in PROFESSIONAL_AREAS" :key="area.id" type="button" class="choice-chip" :class="{ chosen: form.recruitingAreaIds.includes(area.id) }" @click="form.recruitingAreaIds = toggleList(form.recruitingAreaIds, area.id)"><PhCheck v-if="form.recruitingAreaIds.includes(area.id)" :size="14" />{{ area.name }}</button></div></fieldset>
+              <label class="field field-wide"><span>Acerca de la empresa</span><textarea v-model="form.about" class="control textarea" rows="5" maxlength="800" placeholder="Describe la misión, el equipo y la cultura de tu empresa…"></textarea><span class="field-foot">{{ form.about.length }} / 800</span></label>
             </div>
+            <div class="edit-actions"><button type="button" class="button button-secondary" @click="cancelEdit">Cancelar</button><button type="submit" class="button button-primary"><PhCheck :size="17" />Guardar cambios</button></div>
+          </form>
+        </section>
+      </template>
 
-            <!-- Timeline -->
-            <div class="space-y-0">
-              <div
-                v-for="(exp, index) in user?.experience"
-                :key="exp.id"
-                class="relative flex gap-5"
-                :class="{ 'pb-8': index < (user?.experience?.length ?? 0) - 1 }"
-              >
-                <!-- Timeline line -->
-                <div class="flex flex-col items-center flex-shrink-0">
-                  <!-- Company logo square -->
-                  <div
-                    class="w-10 h-10 rounded-md flex items-center justify-center text-white text-xs font-bold flex-shrink-0 z-10 shadow-sm"
-                    :style="{ backgroundColor: exp.companyColor }"
-                  >
-                    {{ exp.companyInitials }}
-                  </div>
-                  <!-- Line -->
-                  <div
-                    v-if="index < (user?.experience?.length ?? 0) - 1"
-                    class="w-px flex-1 mt-2"
-                    :class="theme.theme === 'dark' ? 'bg-[#242C3D]' : 'bg-gray-100'"
-                  ></div>
-                </div>
-
-                <!-- Content -->
-                <div class="flex-1 min-w-0 pb-1">
-                  <div class="flex items-start justify-between gap-2 flex-wrap">
-                    <div>
-                      <h3
-                        class="text-sm font-semibold"
-                        :class="theme.theme === 'dark' ? 'text-[#F3F4F6]' : 'text-gray-900'"
-                      >
-                        {{ exp.title }}
-                      </h3>
-                      <div class="flex items-center gap-1.5 mt-0.5">
-                        <PhBuildings
-                          :size="12"
-                          :class="theme.theme === 'dark' ? 'text-[#9CA3AF]' : 'text-gray-400'"
-                        />
-                        <span
-                          class="text-xs font-medium"
-                          :class="theme.theme === 'dark' ? 'text-[#9CA3AF]' : 'text-gray-500'"
-                        >
-                          {{ exp.company }} · {{ exp.location }}
-                        </span>
-                      </div>
-                    </div>
-                    <div
-                      class="flex items-center gap-1 text-xs flex-shrink-0"
-                      :class="theme.theme === 'dark' ? 'text-[#9CA3AF]' : 'text-gray-400'"
-                    >
-                      <PhCalendarBlank :size="12" />
-                      {{ exp.startDate }} — {{ exp.current ? 'Presente' : exp.endDate }}
-                    </div>
-                  </div>
-
-                  <!-- Current badge -->
-                  <div
-                    v-if="exp.current"
-                    class="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded text-xs border"
-                    :class="
-                      theme.theme === 'dark'
-                        ? 'bg-[#3B82F6]/10 border-[#3B82F6]/25 text-[#3B82F6]'
-                        : 'bg-blue-50 border-blue-200 text-blue-700'
-                    "
-                  >
-                    <PhCheckCircle :size="11" weight="fill" />
-                    Puesto actual
-                  </div>
-
-                  <p
-                    class="text-xs leading-relaxed mt-2"
-                    :class="theme.theme === 'dark' ? 'text-[#9CA3AF]' : 'text-gray-600'"
-                  >
-                    {{ exp.description }}
-                  </p>
-                </div>
-              </div>
-            </div>
+      <template v-else>
+        <section v-if="profileCompletion" class="panel content-panel">
+          <div class="flex flex-wrap items-center justify-between gap-4"><div><span class="eyebrow">Compleción del perfil</span><h2>{{ profileCompletion.percentage }}% completo</h2><p class="mt-1 text-sm text-gray-400">{{ profileCompletion.next ? `Siguiente paso recomendado: ${profileCompletion.next.label}. Puedes completarlo cuando quieras.` : 'Tu perfil tiene la información principal para recibir mejores recomendaciones.' }}</p></div><router-link to="/panel/editar" class="button button-secondary">Completar perfil</router-link></div>
+          <div class="mt-4 h-2 overflow-hidden rounded-full bg-[#253247]"><div class="h-full rounded-full bg-emerald-500 transition-all" :style="{ width: `${profileCompletion.percentage}%` }"></div></div>
+          <div class="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-gray-400"><span v-for="check in profileCompletion.checks" :key="check.id">{{ check.complete ? '✓' : '○' }} {{ check.label }}</span></div>
+        </section>
+        <section class="profile-hero panel">
+          <div class="hero-cover"><div class="cover-grid"></div><span class="cover-label">PERFIL PROFESIONAL</span><button class="cover-edit" aria-label="Editar perfil" @click="goToEdit()"><PhPencilSimple :size="16" /></button></div>
+          <div class="hero-main">
+            <div class="avatar-wrap"><img v-if="user?.avatar" :src="user.avatar" :alt="user.name" class="avatar" /><div v-else class="avatar avatar-fallback">{{ user?.name?.charAt(0) }}</div></div>
+            <div class="hero-info"><div class="name-line"><h1>{{ user?.name }}</h1></div><p class="profile-location"><PhMapPin :size="16" />{{ user?.location || 'Agrega tu ubicación' }}<span>·</span><a v-if="user?.website" :href="user.website" target="_blank" rel="noreferrer">{{ user.website }}</a><span v-else>Jinowork</span></p></div>
+            <button class="button button-secondary hero-edit" @click="goToEdit()"><PhPencilSimple :size="17" />Editar perfil</button>
           </div>
-        </div>
-      </div>
+          <div v-if="user?.skillIds?.length || user?.skills?.length" class="hero-tags"><span v-for="skill in profileSkillLabels.slice(0, 8)" :key="skill" class="tech-badge"><img v-if="skillIcon(skill)" :src="skillIcon(skill)" :alt="''" class="tech-icon" loading="lazy" /><span v-else class="tech-fallback">{{ skill.slice(0, 1) }}</span>{{ skill }}</span><button class="tag-add" aria-label="Editar habilidades" @click="goToEdit()"><PhPlus :size="15" /></button></div>
+        </section>
 
-      <section class="rounded-xl border p-6 sm:p-8 mt-7" :class="theme.theme === 'dark' ? 'bg-[#151A27] border-[#242C3D]' : 'bg-white border-gray-200'">
-        <div class="flex items-center justify-between mb-5"><div><h2 class="text-xl font-bold">Mis postulaciones</h2><p class="text-sm text-gray-500 mt-1">Sigue las oportunidades a las que ya aplicaste.</p></div><span class="tag-pill">{{ appliedJobs.length }} enviadas</span></div>
-        <div v-if="appliedJobs.length" class="divide-y divide-gray-200/20">
-          <router-link v-for="job in appliedJobs" :key="job.id" :to="`/empleos/${job.id}`" class="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 block hover:text-[#3B82F6]"><div><p class="font-semibold">{{ job.title }}</p><p class="text-sm text-gray-500 mt-1">{{ job.company }} · {{ job.location }}</p></div><span class="text-xs px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600">Postulación enviada</span></router-link>
+        <div class="candidate-layout">
+          <div class="candidate-main-column">
+            <section class="panel content-panel">
+              <div class="section-heading"><div><span class="eyebrow">Presentación</span><h2>Acerca de</h2></div><button class="icon-button" aria-label="Editar acerca de" @click="goToEdit()"><PhPencilSimple :size="17" /></button></div>
+              <p v-if="user?.about" class="body-copy preserve-lines">{{ user.about }}</p><div v-else class="empty-state"><PhSparkle :size="21" /><p>Presenta tu experiencia, tus fortalezas y el tipo de retos que te interesan.</p><button class="text-button" @click="goToEdit()">Escribir presentación <PhArrowUpRight :size="15" /></button></div>
+            </section>
+            <section class="panel content-panel">
+              <div class="section-heading"><div><span class="eyebrow">Trayectoria</span><h2>Experiencia</h2></div><button class="icon-button" aria-label="Editar experiencia" @click="goToEdit()"><PhPencilSimple :size="17" /></button></div>
+              <div v-if="user?.experience?.length" class="timeline"><article v-for="exp in user.experience" :key="exp.id" class="timeline-item"><div class="timeline-mark"><PhBriefcase :size="19" /></div><div><h3>{{ exp.title }}</h3><p class="item-subtitle">{{ exp.company }}<span v-if="exp.location"> · {{ exp.location }}</span></p><p class="item-date"><PhCalendarBlank :size="14" />{{ exp.startDate }} — {{ exp.current ? 'Actualidad' : exp.endDate }}</p><p v-if="exp.description" class="body-copy item-description">{{ exp.description }}</p></div></article></div>
+              <div v-else class="empty-state"><PhBriefcase :size="21" /><p>Agrega tus puestos anteriores y actuales.</p><button class="text-button" @click="goToEdit()">Añadir experiencia <PhPlus :size="15" /></button></div>
+            </section>
+            <section class="panel content-panel">
+              <div class="section-heading"><div><span class="eyebrow">Formación</span><h2>Educación</h2></div><button class="icon-button" aria-label="Editar educación" @click="goToEdit()"><PhPencilSimple :size="17" /></button></div>
+              <div v-if="user?.education?.length" class="timeline"><article v-for="edu in user.education" :key="edu.id" class="timeline-item"><div class="timeline-mark education-mark"><PhGraduationCap :size="20" /></div><div><h3>{{ edu.degree }}</h3><p class="item-subtitle">{{ edu.institution }}</p><p class="item-date">{{ edu.field }}<span v-if="edu.field"> · </span>{{ edu.year }}</p></div></article></div>
+              <div v-else class="empty-state"><PhGraduationCap :size="21" /><p>Comparte tu formación académica.</p><button class="text-button" @click="goToEdit()">Añadir estudios <PhPlus :size="15" /></button></div>
+            </section>
+          </div>
+          <aside class="candidate-side-column">
+            <section class="panel content-panel contact-card"><span class="eyebrow">En pocas palabras</span><h2>Información</h2><div class="info-row"><PhMapPin :size="18" /><div><small>Ubicación</small><p>{{ user?.location || 'Sin especificar' }}</p></div></div><div class="info-row"><PhBriefcase :size="18" /><div><small>Modalidad preferida</small><p>{{ user?.preferredModality || 'Sin preferencia' }}</p></div></div><a v-if="user?.website" class="info-row" :href="user.website" target="_blank" rel="noreferrer"><PhGlobe :size="18" /><div><small>Sitio web</small><p>{{ user.website }}</p></div><PhArrowUpRight :size="14" /></a><a class="info-row" :href="`mailto:${user?.email}`"><PhEnvelope :size="18" /><div><small>Correo electrónico</small><p>{{ user?.email }}</p></div></a><div v-if="user?.phone" class="info-row"><PhPhone :size="18" /><div><small>Teléfono</small><p>{{ user.phone }}</p></div></div></section>
+            <section v-if="user?.preferredCategories?.length" class="panel content-panel"><span class="eyebrow">Objetivo</span><h2>Áreas de interés</h2><div class="category-list"><span v-for="category in user.preferredCategories" :key="category" class="category-chip">{{ category }}</span></div></section>
+            <section class="panel content-panel applications-card"><span class="eyebrow">Tu búsqueda</span><h2>Postulaciones</h2><div class="application-count">{{ appliedJobs.length }}<span> enviadas</span></div><p>Sigue aquí las oportunidades a las que te has postulado.</p><router-link to="/empleos" class="text-button">Explorar empleos <PhArrowUpRight :size="15" /></router-link></section>
+          </aside>
         </div>
-        <div v-else class="rounded-lg border border-dashed p-7 text-center text-sm text-gray-500">Aún no tienes postulaciones. Explora ofertas y da seguimiento desde aquí.</div>
-      </section>
+
+        <section class="panel applications-list"><div class="section-heading"><div><span class="eyebrow">Actividad</span><h2>Mis postulaciones</h2></div><span class="count-pill">{{ appliedJobs.length }}</span></div><div v-if="appliedJobs.length" class="job-list"><router-link v-for="job in appliedJobs" :key="job.id" :to="`/empleos/${job.id}`" class="job-row"><div class="job-monogram" :style="{ backgroundColor: job.companyColor }">{{ job.companyInitials }}</div><div class="job-copy"><strong>{{ job.title }}</strong><span>{{ job.company }} · {{ job.location }}</span></div><span class="sent-status"><span></span>{{ applicationStatus(job.id) }}</span><PhArrowUpRight :size="16" class="job-arrow" /></router-link></div><div v-else class="empty-applications"><div class="empty-briefcase"><PhBriefcase :size="22" /></div><div><strong>Aún no tienes postulaciones</strong><p>Encuentra una oportunidad que encaje contigo y aparecerá aquí.</p></div><router-link to="/empleos" class="button button-primary">Ver empleos</router-link></div></section>
+
+        <section v-if="isEditing" class="edit-overlay">
+          <form class="edit-card candidate-editor" @submit.prevent="saveProfile">
+            <div class="edit-header"><div><span class="eyebrow">Tu espacio profesional</span><h2>Editar perfil</h2></div><button type="button" class="icon-button" aria-label="Volver al panel" @click="cancelEdit"><PhX :size="20" /></button></div>
+            <div class="editor-tabs"><button v-for="tab in tabs" :key="tab" type="button" :class="{ selected: activeTab === tab }" @click="activeTab = tab">{{ tab }}</button></div>
+            <div v-if="activeTab === 'Perfil'" class="edit-grid">
+              <label class="field"><span>Nombre completo <i>*</i></span><input v-model="form.name" class="control" placeholder="Tu nombre y apellidos" /><small v-if="errors.name">{{ errors.name }}</small></label>
+              <label class="field"><span>Titular profesional</span><input v-model="form.title" class="control" placeholder="Ej. Ingeniera de software · Backend" /></label>
+              <label class="field"><span>Correo electrónico <i>*</i></span><input v-model="form.email" type="email" class="control" placeholder="nombre@correo.com" /><small v-if="errors.email">{{ errors.email }}</small></label>
+              <label class="field"><span>Teléfono</span><input v-model="form.phone" type="tel" class="control" placeholder="+505 0000 0000" /></label>
+              <label class="field"><span>Ubicación</span><input v-model="form.location" class="control" placeholder="Ciudad, país" /></label>
+              <label class="field"><span>Sitio web o portafolio</span><input v-model="form.website" type="url" class="control" placeholder="https://tuportafolio.com" /></label>
+              <div class="field field-wide"><span class="field-label">Área profesional principal</span><select v-model="form.professionalAreaId" class="control" @change="form.specializationIds = []; form.skillIds = []"><option value="">Selecciona un área</option><option v-for="area in PROFESSIONAL_AREAS" :key="area.id" :value="area.id">{{ area.name }}</option></select><small class="field-hint">Las especializaciones y habilidades disponibles dependen del área.</small></div>
+              <fieldset class="field field-wide"><legend>Otras áreas de interés</legend><div class="choice-grid"><button v-for="area in secondaryAreas" :key="area.id" type="button" class="choice-chip" :class="{ chosen: form.secondaryAreaIds.includes(area.id) }" @click="form.secondaryAreaIds = toggleList(form.secondaryAreaIds, area.id)"><PhCheck v-if="form.secondaryAreaIds.includes(area.id)" :size="14" />{{ area.name }}</button></div></fieldset>
+              <fieldset v-if="profileArea" class="field field-wide"><legend>Especializaciones</legend><div class="choice-grid"><button v-for="item in profileSpecializations" :key="item.id" type="button" class="choice-chip" :class="{ chosen: form.specializationIds.includes(item.id) }" @click="form.specializationIds = toggleList(form.specializationIds, item.id); form.skillIds = form.skillIds.filter(id => profileSkills.some(skill => skill.id === id))"><PhCheck v-if="form.specializationIds.includes(item.id)" :size="14" />{{ item.name }}</button></div></fieldset>
+              <fieldset v-if="form.specializationIds.length" class="field field-wide"><legend>Habilidades</legend><div class="choice-grid"><button v-for="skill in profileSkills" :key="skill.id" type="button" class="choice-chip" :class="{ chosen: form.skillIds.includes(skill.id) }" @click="form.skillIds = toggleList(form.skillIds, skill.id)"><PhCheck v-if="form.skillIds.includes(skill.id)" :size="14" />{{ skill.name }}</button></div><small class="field-hint">Elige solo las habilidades que correspondan a tus especializaciones.</small></fieldset><div v-if="selectedProfileSkills.length" class="grid gap-3 sm:grid-cols-2"><label v-for="skill in selectedProfileSkills" :key="skill.id" class="field"><span>Nivel de {{ skill.name }}</span><select v-model="form.skillLevels[skill.id]" class="control"><option value="">Sin especificar</option><option v-for="level in SKILL_LEVELS" :key="level" :value="level">{{ level }}</option></select></label></div>
+              <label class="field"><span>Años de experiencia</span><select v-model.number="form.experienceYears" class="control"><option v-for="year in 21" :key="year - 1" :value="year - 1">{{ year - 1 }}{{ year === 21 ? '+' : '' }}</option></select></label>
+              <div class="field"><span class="field-label">Departamento y municipio</span><div class="edit-grid"><select v-model="form.department" class="control" @change="form.municipality = ''"><option value="">Departamento</option><option v-for="department in DEPARTMENTS" :key="department">{{ department }}</option></select><select v-model="form.municipality" class="control" :disabled="!form.department"><option value="">Municipio</option><option v-for="municipality in profileMunicipalities" :key="municipality">{{ municipality }}</option></select></div></div>
+              <label class="field field-wide"><span>Acerca de ti</span><textarea v-model="form.about" class="control textarea" rows="5" maxlength="600" placeholder="Resume tu experiencia, tus fortalezas y lo que buscas en tu próximo reto…"></textarea><span class="field-foot">{{ form.about.length }} / 600</span></label>
+            </div>
+            <div v-else-if="activeTab === 'Experiencia'" class="structured-editor">
+  <div class="editor-callout"><PhBriefcase :size="20"/><p>Agrega cada puesto por separado. Las fechas y el área ayudan a comparar tu experiencia con los requisitos de una oferta.</p></div>
+  <button type="button" class="button button-secondary justify-self-start" @click="addExperience"><PhPlus :size="16"/>Añadir experiencia</button>
+  <article v-for="(item, index) in form.experience" :key="item.id" class="rounded-xl border border-[#293a50] p-4">
+    <div class="edit-grid">
+      <label class="field"><span>Cargo</span><input v-model="item.title" class="control" placeholder="Ej. Analista contable"/></label>
+      <label class="field"><span>Empresa</span><input v-model="item.company" class="control" placeholder="Nombre de la empresa"/></label>
+      <label class="field"><span>Área profesional</span><select v-model="item.areaId" class="control"><option value="">Selecciona un área</option><option v-for="area in PROFESSIONAL_AREAS" :key="area.id" :value="area.id">{{ area.name }}</option></select></label>
+      <label class="field"><span>Ubicación</span><input v-model="item.location" class="control" placeholder="Municipio, departamento"/></label>
+      <label class="field"><span>Fecha de inicio</span><input v-model="item.startDate" type="month" class="control"/></label>
+      <label class="availability-toggle"><input v-model="item.current" type="checkbox"/><span class="toggle-visual"></span><span><strong>Actualmente trabajo aquí</strong></span></label>
+      <label v-if="!item.current" class="field"><span>Fecha de finalización</span><input v-model="item.endDate" type="month" class="control"/></label>
+      <label class="field field-wide"><span>Responsabilidades o logros (opcional)</span><textarea v-model="item.description" class="control textarea" rows="3" maxlength="600"></textarea></label>
     </div>
-  </div>
+    <button type="button" class="mt-3 text-sm text-red-300" @click="form.experience = form.experience.filter(exp => exp.id !== item.id)">Quitar este puesto</button>
+  </article>
+  <p v-if="!form.experience.length" class="empty-editor">Aún no has añadido puestos. Puedes saltar esta sección y completarla después.</p>
+</div><div v-else-if="activeTab === 'Educación'" class="structured-editor">
+  <div class="editor-callout"><PhGraduationCap :size="20"/><p>Registra cada estudio por separado. La institución y el año se pueden actualizar después.</p></div>
+  <button type="button" class="button button-secondary justify-self-start" @click="addEducation"><PhPlus :size="16"/>Añadir formación</button>
+  <article v-for="item in form.education" :key="item.id" class="rounded-xl border border-[#293a50] p-4">
+    <div class="edit-grid">
+      <label class="field"><span>Nivel o título</span><select v-model="item.degree" class="control"><option value="">Selecciona un nivel</option><option v-if="isCustomEducationLevel(item.degree)" :value="item.degree">{{ item.degree }}</option><option v-for="level in EDUCATION_REQUIREMENTS" :key="level" :value="level">{{ level }}</option></select></label>
+      <label class="field"><span>Institución</span><input v-model="item.institution" class="control" placeholder="Nombre de la institución"/></label>
+      <label class="field"><span>Área de estudio</span><select v-model="item.field" class="control"><option value="">Selecciona un área</option><option v-if="item.field" :value="item.field">{{ item.field }}</option><option v-for="spec in studySpecializations" :key="spec.id" :value="spec.name">{{ spec.name }}</option></select></label>
+      <label class="availability-toggle"><input v-model="item.currentlyStudying" type="checkbox"/><span class="toggle-visual"></span><span><strong>Actualmente estudiando</strong></span></label>
+      <label class="field"><span>Año de finalización o esperado</span><select v-model="item.year" class="control"><option v-for="year in educationYears" :key="year" :value="String(year)">{{ year }}</option></select></label>
+    </div>
+    <button type="button" class="mt-3 text-sm text-red-300" @click="form.education = form.education.filter(education => education.id !== item.id)">Quitar estos estudios</button>
+  </article>
+  <p v-if="!form.education.length" class="empty-editor">Aún no has añadido formación. Puedes saltar esta sección y completarla después.</p>
+</div><div v-else class="edit-grid preferences-editor">
+              <fieldset class="field field-wide"><legend>Modalidad de trabajo preferida</legend><div class="option-cards"><button v-for="mode in modalities" :key="mode" type="button" class="option-card" :class="{ chosen: form.preferredModality === mode }" @click="form.preferredModality = mode"><span class="radio-dot"></span>{{ mode }}</button></div></fieldset>
+              <fieldset class="field field-wide"><legend>Tipo de empleo preferido</legend><div class="choice-grid"><button v-for="type in EMPLOYMENT_TYPES" :key="type" type="button" class="choice-chip" :class="{ chosen: form.preferredEmploymentTypes.includes(type) }" @click="form.preferredEmploymentTypes = toggleList(form.preferredEmploymentTypes, type)"><PhCheck v-if="form.preferredEmploymentTypes.includes(type)" :size="14" />{{ type }}</button></div></fieldset>
+              <fieldset class="field field-wide"><legend>Áreas profesionales de interés</legend><div class="choice-grid"><button v-for="category in interestCategories" :key="category" type="button" class="choice-chip" :class="{ chosen: form.preferredCategories.includes(category) }" @click="toggleCategory(category)"><PhCheck v-if="form.preferredCategories.includes(category)" :size="14" />{{ category }}</button></div></fieldset>
+              <label class="field field-wide"><span>Ubicaciones de interés</span><div class="choice-grid"><button v-for="department in DEPARTMENTS" :key="department" type="button" class="choice-chip" :class="{ chosen: form.preferredLocations.includes(department) }" @click="form.preferredLocations = toggleList(form.preferredLocations, department)">{{ department }}</button></div></label>
+              <label class="availability-toggle"><input v-model="form.available" type="checkbox" /><span class="toggle-visual"></span><span><strong>Disponible para nuevas oportunidades</strong><small>Las empresas sabrán que estás abierto a conversar.</small></span></label>
+            </div>
+            <div class="edit-actions"><button type="button" class="button button-secondary" @click="cancelEdit">Cancelar</button><button type="submit" class="button button-primary"><PhCheck :size="17" />Guardar cambios</button></div>
+          </form>
+        </section>
+      </template>
+    </div>
+  </main>
 </template>
+
+<style scoped>
+.profile-page{--ink:#f2f5fa;--muted:#9ba8bb;--quiet:#728097;--surface:#111a29;--surface-raised:#152135;--line:#26364b;--blue:#72a7ff;--blue-deep:#397be7;--green:#49cb96;min-height:100%;padding:40px 24px 72px;background:radial-gradient(ellipse at 50% -25%,rgba(48,99,174,.17),transparent 55%),#0b111c;color:var(--ink)}
+.profile-shell{max-width:1120px;margin:auto;display:grid;gap:20px}.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 10px 34px rgba(0,0,0,.12)}.notice{position:fixed;right:24px;top:92px;z-index:60;display:flex;align-items:center;gap:10px;padding:13px 17px;border:1px solid rgba(73,203,150,.35);border-radius:12px;background:#10251f;color:#84e0b8;box-shadow:0 15px 40px #0005}.eyebrow{display:block;color:var(--quiet);font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}.button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:42px;padding:0 16px;border:1px solid transparent;border-radius:9px;font:700 13px 'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:.18s ease}.button-primary{background:var(--blue-deep);color:white}.button-primary:hover{background:#4d8df0;transform:translateY(-1px)}.button-secondary{background:#17243a;color:#e4eaf4;border-color:#32445e}.button-secondary:hover{border-color:#7694bf;background:#1b2c46}.icon-button{display:grid;place-items:center;width:36px;height:36px;background:transparent;border:1px solid transparent;border-radius:9px;color:#94a6bf;cursor:pointer}.icon-button:hover{background:#1b2b42;color:var(--ink);border-color:#344963}
+.profile-hero{position:relative}.hero-cover,.company-cover{height:172px;position:relative;overflow:hidden;background:linear-gradient(112deg,#132441,#183258 52%,#15233a)}.cover-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(135,175,232,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(135,175,232,.055) 1px,transparent 1px);background-size:32px 32px;mask-image:linear-gradient(90deg,black,transparent 90%)}.hero-cover:after{content:"";position:absolute;right:10%;top:-160px;width:450px;height:360px;border:1px solid #8dbaff1c;border-radius:50%;transform:rotate(-25deg);box-shadow:0 0 0 36px #8dbaff0a,0 0 0 72px #8dbaff08}.cover-label{position:absolute;left:28px;top:24px;color:#bfd3f0a3;font-size:9px;font-weight:800;letter-spacing:.19em}.cover-edit{position:absolute;right:20px;top:17px;z-index:1;width:34px;height:34px;display:grid;place-items:center;background:#09132180;color:white;border:1px solid #b5d1f333;border-radius:9px;cursor:pointer}.hero-main{position:relative;display:flex;align-items:center;gap:20px;padding:0 30px 0 34px;min-height:126px}.avatar-wrap{align-self:flex-start;margin-top:-43px;position:relative;z-index:2;flex-shrink:0;padding:4px;border-radius:50%;background:var(--surface)}.avatar{width:90px;height:90px;display:grid;place-items:center;border-radius:50%;object-fit:cover;border:2px solid #a8c9ff;background:#263d60}.avatar-fallback{color:#edf4ff;font-size:32px;font-weight:700}.hero-info{min-width:0;flex:1;padding:17px 0}.name-line{display:flex;align-items:center;flex-wrap:wrap;gap:12px}.name-line h1,.company-intro h1{font-size:25px;line-height:1.2;letter-spacing:-.04em}.availability{display:inline-flex;align-items:center;gap:7px;color:#74dcb0;font-size:11px;font-weight:700}.availability>span,.sent-status>span{width:7px;height:7px;background:#52ce97;border-radius:50%;box-shadow:0 0 0 3px #52ce971e}.profile-title{margin-top:5px;color:#c1ccdc;font-size:14px}.profile-location{display:flex;align-items:center;gap:7px;margin-top:8px;color:var(--muted);font-size:12px}.profile-location a,.company-meta a{color:#98bdf2;text-decoration:none}.hero-edit{flex-shrink:0}.hero-tags{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid #25354a;padding:14px 30px 17px}.skill-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #36547a;background:#172a45;color:#bdd5f5;border-radius:7px;padding:6px 10px;font-size:11px;font-weight:650}.tag-add{width:28px;height:28px;display:grid;place-items:center;border:1px dashed #415675;background:transparent;border-radius:7px;color:#8ba6cd;cursor:pointer}.muted-copy{color:var(--quiet);font-size:12px}
+.candidate-layout{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:20px;align-items:start}.candidate-main-column,.candidate-side-column{display:grid;gap:16px}.content-panel{padding:22px 24px}.section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.section-heading h2,.content-panel h2,.applications-list h2{margin-top:5px;font-size:17px;letter-spacing:-.025em}.body-copy{color:#bcc6d5;font-size:13px;line-height:1.8}.preserve-lines{white-space:pre-line}.empty-state{padding:16px;border:1px dashed #2b3a50;border-radius:11px;color:#8da2be}.empty-state>svg{color:#76a7ec}.empty-state p{margin:8px 0 10px;max-width:470px;color:#a7b4c7;font-size:12px;line-height:1.6}.text-button{display:inline-flex;align-items:center;gap:6px;background:transparent;color:#8fb8f4;border:0;font:700 12px 'Plus Jakarta Sans',sans-serif;text-decoration:none;cursor:pointer}.text-button:hover{color:#c0d7fc}.timeline{display:grid}.timeline-item{position:relative;display:grid;grid-template-columns:38px 1fr;gap:13px;padding:4px 0 20px}.timeline-item:not(:last-child):after{content:"";position:absolute;left:18px;top:40px;bottom:0;width:1px;background:#2b3e57}.timeline-mark{position:relative;z-index:1;width:38px;height:38px;display:grid;place-items:center;background:#1b2c46;border:1px solid #324d70;border-radius:10px;color:#94baff}.education-mark{background:#282440;border-color:#4a426f;color:#b6aaff}.timeline-item h3,.structured-list h3{font-size:13px;line-height:1.5}.item-subtitle{margin-top:3px;color:#c3cede;font-size:12px}.item-date{display:flex;align-items:center;gap:5px;margin-top:7px;color:#8190a6;font-size:11px}.item-description{margin-top:10px}.contact-card h2,.applications-card h2{margin-bottom:16px}.info-row{display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid #243247;color:#7e9fc9;text-decoration:none}.info-row>div{min-width:0;flex:1}.info-row small{display:block;color:#718198;font-size:10px}.info-row p{overflow:hidden;margin-top:3px;color:#c8d1df;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.category-list{display:flex;gap:7px;flex-wrap:wrap}.category-chip{padding:6px 9px;border:1px solid #354c6d;border-radius:999px;background:#192943;color:#aac6ec;font-size:10px;font-weight:700}.application-count{font-size:29px;font-weight:750;letter-spacing:-.05em}.application-count span{font-size:12px;font-weight:500;color:var(--muted);letter-spacing:0}.applications-card>p{margin:5px 0 12px;color:#93a0b2;font-size:11px;line-height:1.6}.applications-list{padding:24px}.count-pill{display:grid;place-items:center;min-width:30px;height:27px;border:1px solid #354964;border-radius:8px;background:#1a2b43;color:#c2d6f2;font-size:11px;font-weight:700}.job-list{border-top:1px solid #27364b}.job-row{display:flex;align-items:center;gap:13px;padding:14px 4px;border-bottom:1px solid #243247;text-decoration:none;transition:background .15s}.job-row:hover{background:#152135}.job-monogram{width:40px;height:40px;display:grid;place-items:center;flex-shrink:0;border-radius:11px;color:white;font-size:12px;font-weight:800}.job-copy{display:grid;gap:4px;min-width:0;flex:1}.job-copy strong{overflow:hidden;color:#e7ecf4;font-size:12px;text-overflow:ellipsis;white-space:nowrap}.job-copy>span{color:#8593a7;font-size:11px}.sent-status{display:inline-flex;align-items:center;gap:7px;color:#77d8ae;font-size:10px;font-weight:700}.sent-status>span{width:6px;height:6px;box-shadow:none}.job-arrow{color:#657a96}.empty-applications{display:flex;align-items:center;gap:14px;padding:22px 0 4px}.empty-briefcase{width:42px;height:42px;display:grid;place-items:center;flex-shrink:0;border:1px solid #304664;border-radius:12px;background:#192b45;color:#8db6f0}.empty-applications>div:nth-child(2){flex:1}.empty-applications strong{font-size:12px}.empty-applications p{margin-top:4px;color:#8998ad;font-size:11px}
+.company-hero{padding-bottom:0}.company-cover{height:194px;background:linear-gradient(110deg,#122a34,#164449 52%,#152c39)}.company-cover:after{content:"";position:absolute;right:7%;top:-240px;width:510px;height:440px;border:1px solid #78d7c225;border-radius:50%;box-shadow:0 0 0 48px #78d7c20a,0 0 0 96px #78d7c207}.cover-orbit{position:absolute;z-index:1;width:250px;height:250px;border:1px solid #70cab51c;border-radius:50%;right:19%;top:30px}.orbit-two{width:130px;height:130px;right:24%;top:90px}.company-cover .cover-label{left:30px;top:28px}.company-heading{position:relative;display:flex;align-items:flex-end;gap:17px;padding:0 30px;margin-top:-47px}.company-mark{position:relative;z-index:2;width:94px;height:94px;display:grid;place-items:center;flex-shrink:0;border:5px solid var(--surface);border-radius:21px;background:#1d6461;color:#d4f2e9;box-shadow:0 5px 16px #0003}.company-intro{padding:0 0 5px;flex:1;min-width:0}.company-intro h1{margin-top:5px}.company-intro p{margin-top:6px;color:#a7b4c7;font-size:12px}.company-edit{margin:0 0 6px}.editing-page .profile-shell:has(.edit-overlay)>:not(.notice){display:none}.editing-page .edit-card{margin:0 auto}.company-meta{display:flex;gap:21px;flex-wrap:wrap;padding:21px 30px;margin-top:14px;border-top:1px solid #26364b}.company-meta span,.company-meta a{display:flex;align-items:center;gap:8px;color:#a7b7ca;font-size:11px;text-decoration:none}.company-meta svg{color:#77c8b4}.company-layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:20px;align-items:start}.company-contact h2{margin-top:7px}.company-contact>p{margin-top:4px;color:#98a7ba;font-size:11px}.company-contact>a{display:flex;align-items:center;gap:9px;margin-top:16px;color:#aec8ec;font-size:11px;text-decoration:none}.company-contact>a svg{color:#78a6e1}.full-button{width:100%;margin-top:20px}.company-next{display:flex;align-items:center;gap:14px}.company-next-icon{width:44px;height:44px;display:grid;place-items:center;flex-shrink:0;border:1px solid #344a66;border-radius:12px;background:#192a42;color:#9dc0f0}.company-next h2{margin-top:5px;font-size:15px}.company-next p{margin-top:4px;color:#95a3b6;font-size:11px}.coming-soon{margin-left:auto;padding:7px 10px;border:1px solid #344358;border-radius:7px;color:#90a0b6;font-size:10px;white-space:nowrap}.edit-overlay{position:relative;display:flex;justify-content:center;align-items:flex-start;overflow:visible;padding:0;background:transparent}.edit-card{width:min(100%,720px);height:max-content;max-height:none;overflow-y:visible;padding:26px;background:#101a29;border:1px solid #324259;border-radius:17px;box-shadow:0 25px 80px #0008}.edit-header{display:flex;align-items:center;justify-content:space-between}.edit-header h2{margin-top:5px;font-size:22px;letter-spacing:-.04em}.editor-tabs{display:flex;gap:4px;overflow-x:auto;margin:21px 0 22px;padding:4px;border:1px solid #26364b;border-radius:10px;background:#0c1421}.editor-tabs button{flex:1;min-width:max-content;padding:10px 12px;border:0;border-radius:7px;background:transparent;color:#8290a4;font:650 11px 'Plus Jakarta Sans',sans-serif;cursor:pointer}.editor-tabs button.selected{background:#203554;color:#c8ddfc;box-shadow:0 1px 4px #0003}.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:17px 14px}.field{display:grid;gap:7px;align-content:start;min-width:0}.field>span,.field-label,.field legend{color:#c9d2df;font-size:11px;font-weight:700}.field i{color:#78aaff;font-style:normal}.field small{color:#ff8d91;font-size:10px}.field-wide{grid-column:1/-1}.control{width:100%;min-height:43px;padding:0 12px;appearance:none;border:1px solid #34445b;border-radius:8px;background-color:#141f30;color:#edf2f9;font:500 12px 'Plus Jakarta Sans',sans-serif;outline:0;transition:border-color .15s,box-shadow .15s}.control:focus{border-color:#6196e8;box-shadow:0 0 0 3px #5593ed20}.control::placeholder{color:#718096}.control option{background:#141f30;color:#edf2f9}.select,.field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2398a9c0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}.textarea{height:auto;min-height:120px;padding:11px 12px;resize:vertical;line-height:1.65}.field-foot{justify-self:end;color:#718198;font-size:10px}.skill-editor{display:flex;flex-wrap:wrap;align-items:center;gap:7px;min-height:50px;padding:9px;border:1px solid #34445b;border-radius:9px;background:#141f30}.skill-editor .skill-chip{padding:5px 7px}.skill-chip button{display:grid;place-items:center;padding:0;border:0;background:transparent;color:#95b5e3;cursor:pointer}.skill-entry{display:flex;align-items:center;gap:7px;flex:1;min-width:210px;color:#8499b7}.skill-entry input{width:100%;min-height:28px;border:0;outline:0;background:transparent;color:#eef3fa;font:500 11px 'Plus Jakarta Sans',sans-serif}.skill-entry input::placeholder{color:#748198}.skill-entry>button{display:grid;place-items:center;width:25px;height:25px;border:0;border-radius:6px;background:#263c5d;color:#b8d3f8;cursor:pointer}.field-hint{color:#78879b;font-size:10px;line-height:1.6}.edit-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:24px;padding-top:17px;border-top:1px solid #29384c}.structured-editor{display:grid;gap:15px}.editor-callout{display:flex;align-items:flex-start;gap:12px;padding:13px;border:1px solid #30435c;border-radius:10px;background:#16243a;color:#8ab3ed}.editor-callout p{color:#b4c0d1;font-size:11px;line-height:1.65}.structured-list{display:grid;gap:9px}.structured-list article{display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid #293a50;border-radius:10px}.structured-list article>div:last-child{flex:1}.structured-list p,.structured-list small{display:block;margin-top:4px;color:#9aa9bc;font-size:10px}.structured-list small{color:#7e8da1;line-height:1.6}.empty-editor{padding:17px;border:1px dashed #35445a;border-radius:9px;color:#98a7bb;font-size:11px}.preferences-editor fieldset{padding:0;border:0}.preferences-editor legend{margin-bottom:9px}.option-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.option-card{display:flex;align-items:center;gap:9px;min-height:49px;padding:0 12px;border:1px solid #34445b;border-radius:9px;background:#141f30;color:#b9c4d3;text-align:left;font:600 11px 'Plus Jakarta Sans',sans-serif;cursor:pointer}.option-card.chosen{border-color:#568ce0;background:#192b45;color:#deebff}.radio-dot{width:14px;height:14px;flex-shrink:0;border:1px solid #63748a;border-radius:50%}.chosen .radio-dot{border:4px solid #75a9fa}.choice-grid{display:flex;flex-wrap:wrap;gap:7px}.choice-chip{display:flex;align-items:center;gap:5px;padding:7px 10px;border:1px solid #34445b;border-radius:8px;background:#141f30;color:#aab8ca;font:600 10px 'Plus Jakarta Sans',sans-serif;cursor:pointer}.choice-chip.chosen{border-color:#5287d8;background:#1a2c47;color:#c5dcff}.availability-toggle{display:flex;align-items:center;gap:11px;grid-column:1/-1;padding:14px;border:1px solid #30435a;border-radius:10px;background:#132136;cursor:pointer}.availability-toggle input{position:absolute;opacity:0}.toggle-visual{position:relative;width:34px;height:19px;flex-shrink:0;border-radius:20px;background:#405066;transition:.18s}.toggle-visual:after{content:"";position:absolute;left:3px;top:3px;width:13px;height:13px;border-radius:50%;background:#e8edf4;transition:.18s}.availability-toggle input:checked+.toggle-visual{background:#25825f}.availability-toggle input:checked+.toggle-visual:after{left:18px;background:white}.availability-toggle strong,.availability-toggle small{display:block}.availability-toggle strong{color:#dce5f1;font-size:11px}.availability-toggle small{margin-top:4px;color:#8796aa;font-size:10px}
+@media(max-width:800px){.candidate-layout{grid-template-columns:minmax(0,1fr) 270px;gap:13px}.content-panel{padding:18px}.company-layout{grid-template-columns:minmax(0,1fr) 285px;gap:13px}}
+@media(max-width:650px){.profile-page{padding:20px 13px 48px}.profile-shell{gap:13px}.hero-cover{height:135px}.hero-main{align-items:flex-start;gap:13px;padding:0 16px;min-height:0}.avatar-wrap{margin-top:-34px;padding:3px}.avatar{width:70px;height:70px}.avatar-fallback{font-size:25px}.hero-info{padding:10px 0 14px}.name-line h1,.company-intro h1{font-size:20px}.name-line{gap:8px}.availability{font-size:9px}.profile-title{font-size:11px}.profile-location{flex-wrap:wrap;gap:5px;font-size:10px}.hero-edit{width:37px;min-height:37px;padding:0;font-size:0}.hero-edit svg{width:17px}.hero-tags{padding:12px 16px;gap:6px}.skill-chip{padding:5px 7px;font-size:10px}.candidate-layout,.company-layout{grid-template-columns:1fr;gap:13px}.candidate-main-column,.candidate-side-column{gap:13px}.company-cover{height:155px}.company-heading{align-items:center;gap:12px;padding:0 16px;margin-top:-35px}.company-mark{width:70px;height:70px;border-width:4px;border-radius:17px}.company-mark svg{width:29px}.company-intro{padding:0}.company-intro .eyebrow{font-size:8px}.company-intro h1{font-size:18px}.company-intro p{font-size:10px}.company-edit{width:38px;min-height:38px;padding:0;font-size:0}.company-edit svg{width:17px}.company-meta{gap:12px;padding:16px; margin-top:13px}.company-meta span,.company-meta a{font-size:10px}.company-next{align-items:flex-start;flex-wrap:wrap}.coming-soon{margin-left:58px}.edit-overlay{padding:12px 8px}.edit-card{max-height:calc(100vh - 24px);padding:19px 15px;border-radius:14px}.edit-header h2{font-size:20px}.editor-tabs{margin:17px 0}.editor-tabs button{padding:9px 10px;font-size:10px}.edit-grid{grid-template-columns:1fr;gap:14px}.field-wide{grid-column:auto}.option-cards{grid-template-columns:1fr}.availability-toggle{grid-column:auto}.edit-actions{margin-top:18px}.empty-applications{align-items:flex-start;flex-wrap:wrap}.empty-applications>div:nth-child(2){min-width:calc(100% - 58px)}.empty-applications>.button{margin-left:56px}.job-row{gap:9px}.sent-status{font-size:0}.sent-status>span{width:8px;height:8px}.job-arrow{display:none}.applications-list{padding:18px}.notice{left:13px;right:13px;top:79px;justify-content:center;font-size:12px}}
+.tech-badge{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid #354c69;border-radius:9px;background:#16263b;color:#c5d8f2;font-size:12px;font-weight:650}.tech-icon{width:17px;height:17px;object-fit:contain}.tech-fallback{display:grid;place-items:center;width:17px;height:17px;border-radius:5px;background:#344f75;color:#dceaff;font-size:10px;font-weight:800}.tech-badge button{display:grid;place-items:center;margin-left:2px;padding:2px;border:0;background:transparent;color:#8da8cc;cursor:pointer}.skill-picker{position:relative}.skill-search{display:flex;align-items:center;gap:8px;flex:1;min-width:min(100%,220px);padding:0 5px;color:#8ca3c1}.skill-search input{width:100%;min-height:32px;border:0;outline:0;background:transparent;color:#eef3fa;font:500 12px 'Plus Jakarta Sans',sans-serif}.skill-search input::placeholder{color:#8291a5}.skill-results{position:absolute;z-index:4;top:calc(100% + 5px);left:0;right:0;max-height:220px;overflow:auto;padding:5px;border:1px solid #35465e;border-radius:10px;background:#111c2c;box-shadow:0 12px 30px #0008}.skill-results button{display:flex;align-items:center;gap:9px;width:100%;padding:9px 10px;border:0;border-radius:7px;background:transparent;color:#d6dfec;text-align:left;font:600 12px 'Plus Jakarta Sans',sans-serif;cursor:pointer}.skill-results button:hover{background:#1c2e47}.skill-results button svg{margin-left:auto;color:#8eacd5}.no-skills{padding:10px;color:#96a5b8;font-size:12px}.body-copy{font-size:14px}.item-subtitle,.info-row p,.company-contact>a,.company-meta span,.company-meta a{font-size:12px}.item-date,.field-hint{font-size:11px}.eyebrow{font-size:11px}.profile-location{font-size:13px}
+@media(max-width:650px){.body-copy{font-size:14px;line-height:1.75}.profile-location{font-size:12px}.company-meta span,.company-meta a{font-size:12px}.item-subtitle,.info-row p,.company-contact>a{font-size:12px}.item-date,.field-hint{font-size:11px}.eyebrow{font-size:10px}.field>span,.field-label,.field legend{font-size:12px}.control,.skill-search input{font-size:13px}.editor-tabs button{font-size:11px}.hero-main{gap:9px}.profile-location{overflow-wrap:anywhere}.hero-tags{gap:7px}.tech-badge{font-size:11px}}
+@media(prefers-reduced-motion:reduce){.profile-page *{scroll-behavior:auto!important;transition:none!important}}
+</style>
+
+<style scoped>
+.editing-page .profile-shell:has(.edit-overlay)>:not(.notice){display:none}
+.editing-page .edit-overlay{display:block;padding:0;background:transparent;backdrop-filter:none}
+.editing-page .edit-card{max-height:none;margin:0 auto;box-shadow:0 10px 34px rgba(0,0,0,.12)}
+</style>

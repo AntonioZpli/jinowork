@@ -7,6 +7,7 @@ import {
   PhBriefcase,
   PhUser,
   PhMagnifyingGlass,
+  PhBuildings,
   PhList,
   PhX,
   PhSun,
@@ -56,7 +57,7 @@ function handleLogout() {
             <PhBriefcase :size="16" weight="bold" class="text-white" />
           </div>
           <span
-            class="font-heading text-lg font-bold tracking-tight"
+            class="font-heading text-xl font-bold tracking-tight"
             :class="theme.theme === 'dark' ? 'text-[#F3F4F6]' : 'text-gray-900'"
           >
             Jino<span class="text-[#3B82F6]">work</span>
@@ -65,36 +66,58 @@ function handleLogout() {
 
         <!-- Desktop nav -->
         <nav class="hidden md:flex items-center gap-1">
-          <router-link
-            v-if="auth.isAuthenticated"
-            to="/panel"
-            class="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-            :class="[
-              isActive('/panel')
-                ? 'text-[#3B82F6] bg-[#3B82F6]/10'
-                : theme.theme === 'dark'
-                  ? 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-white/5'
-                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100',
-            ]"
-          >
-            <PhUser :size="15" weight="regular" />
-            Mi Perfil
-          </router-link>
-          <router-link
-            v-if="auth.isAuthenticated"
-            to="/empleos"
-            class="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-            :class="[
-              isActive('/empleos')
-                ? 'text-[#3B82F6] bg-[#3B82F6]/10'
-                : theme.theme === 'dark'
-                  ? 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-white/5'
-                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100',
-            ]"
-          >
-            <PhMagnifyingGlass :size="15" weight="regular" />
-            Ofertas
-          </router-link>
+          <!-- Candidate Links -->
+          <template v-if="auth.isAuthenticated && (!auth.user?.role || auth.user.role === 'candidate')">
+            <router-link
+              to="/panel"
+              class="flex items-center gap-1.5 px-3 py-2.5 rounded-md text-base font-medium transition-colors"
+              :class="[
+                isActive('/panel')
+                  ? 'text-[#3B82F6] bg-[#3B82F6]/10'
+                  : theme.theme === 'dark'
+                    ? 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-white/5'
+                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100',
+              ]"
+            >
+              <PhUser :size="16" weight="regular" />
+              Mi Perfil
+            </router-link>
+            <router-link
+              to="/empleos"
+              class="flex items-center gap-1.5 px-3 py-2.5 rounded-md text-base font-medium transition-colors"
+              :class="[
+                isActive('/empleos')
+                  ? 'text-[#3B82F6] bg-[#3B82F6]/10'
+                  : theme.theme === 'dark'
+                    ? 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-white/5'
+                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100',
+              ]"
+            >
+              <PhMagnifyingGlass :size="16" weight="regular" />
+              Ofertas
+            </router-link>
+          </template>
+
+          <!-- Company Links -->
+          <template v-if="auth.isAuthenticated && auth.user?.role === 'company'">
+            <router-link
+              to="/panel"
+              class="flex items-center gap-1.5 px-3 py-2.5 rounded-md text-base font-medium transition-colors"
+              :class="[
+                isActive('/panel')
+                  ? 'text-[#3B82F6] bg-[#3B82F6]/10'
+                  : theme.theme === 'dark'
+                    ? 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-white/5'
+                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100',
+              ]"
+            >
+              <PhBuildings :size="16" weight="regular" />
+              Mi Panel
+            </router-link>
+            <router-link to="/empresa/ofertas" class="flex items-center gap-1.5 px-3 py-2.5 rounded-md text-base font-medium transition-colors" :class="theme.theme === 'dark' ? 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-white/5' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'"><PhBriefcase :size="16" /> Mis ofertas</router-link>
+            <router-link to="/empresa/postulantes" class="flex items-center gap-1.5 px-3 py-2.5 rounded-md text-base font-medium transition-colors" :class="theme.theme === 'dark' ? 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-white/5' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'"><PhUser :size="16" /> Postulantes</router-link>
+            <router-link to="/empresa/perfiles" class="flex items-center gap-1.5 px-3 py-2.5 rounded-md text-base font-medium transition-colors" :class="theme.theme === 'dark' ? 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-white/5' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'"><PhMagnifyingGlass :size="16" /> Buscar perfiles</router-link>
+          </template>
         </nav>
 
         <!-- Right actions -->
@@ -118,7 +141,7 @@ function handleLogout() {
           <template v-if="!auth.isAuthenticated">
             <router-link
               to="/login"
-              class="px-3.5 py-2 text-sm font-medium rounded-md transition-colors"
+              class="px-3.5 py-2 text-base font-medium rounded-md transition-colors"
               :class="
                 theme.theme === 'dark'
                   ? 'text-[#9CA3AF] hover:text-[#F3F4F6]'
@@ -153,7 +176,7 @@ function handleLogout() {
               <!-- Dropdown -->
               <div
                 v-if="dropdownOpen"
-                class="absolute right-0 top-full mt-1.5 w-48 rounded-md border py-1 z-50 shadow-xl"
+                class="absolute right-0 top-full mt-1.5 w-56 rounded-md border py-1 z-50 shadow-xl"
                 :class="
                   theme.theme === 'dark'
                     ? 'bg-[#151A27] border-[#242C3D]'
@@ -161,49 +184,73 @@ function handleLogout() {
                 "
               >
                 <div
-                  class="px-3 py-2 border-b text-xs"
+                  class="px-3 py-2 border-b text-xs flex items-center justify-between gap-2"
                   :class="
                     theme.theme === 'dark'
                       ? 'border-[#242C3D] text-[#9CA3AF]'
                       : 'border-gray-100 text-gray-500'
                   "
                 >
-                  {{ auth.user?.email }}
+                  <span class="truncate">{{ auth.user?.email }}</span>
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#3B82F6]/10 text-[#3B82F6]">
+                    {{ auth.user?.role === 'company' ? 'Empresa' : 'Candidato' }}
+                  </span>
                 </div>
-                <router-link
-                  to="/panel"
-                  @click="dropdownOpen = false"
-                  class="flex items-center gap-2 px-3 py-2 text-sm transition-colors"
-                  :class="
-                    theme.theme === 'dark'
-                      ? 'text-[#F3F4F6] hover:bg-white/5'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  "
-                >
-                  <PhUser :size="14" /> Mi Perfil
-                </router-link>
-                <router-link
-                  to="/empleos"
-                  @click="dropdownOpen = false"
-                  class="flex items-center gap-2 px-3 py-2 text-sm transition-colors"
-                  :class="
-                    theme.theme === 'dark'
-                      ? 'text-[#F3F4F6] hover:bg-white/5'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  "
-                >
-                  <PhMagnifyingGlass :size="14" /> Ofertas de empleo
-                </router-link>
+
+                <!-- Candidate Dropdown Links -->
+                <template v-if="!auth.user?.role || auth.user.role === 'candidate'">
+                  <router-link
+                    to="/panel"
+                    @click="dropdownOpen = false"
+                    class="flex items-center gap-2 px-3 py-2.5 text-sm transition-colors"
+                    :class="
+                      theme.theme === 'dark'
+                        ? 'text-[#F3F4F6] hover:bg-white/5'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    "
+                  >
+                    <PhUser :size="16" /> Mi Perfil
+                  </router-link>
+                  <router-link
+                    to="/empleos"
+                    @click="dropdownOpen = false"
+                    class="flex items-center gap-2 px-3 py-2.5 text-sm transition-colors"
+                    :class="
+                      theme.theme === 'dark'
+                        ? 'text-[#F3F4F6] hover:bg-white/5'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    "
+                  >
+                    <PhMagnifyingGlass :size="16" /> Ofertas de empleo
+                  </router-link>
+                </template>
+
+                <!-- Company Dropdown Links -->
+                <template v-if="auth.user?.role === 'company'">
+                  <router-link
+                    to="/panel"
+                    @click="dropdownOpen = false"
+                    class="flex items-center gap-2 px-3 py-2.5 text-sm transition-colors"
+                    :class="
+                      theme.theme === 'dark'
+                        ? 'text-[#F3F4F6] hover:bg-white/5'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    "
+                  >
+                    <PhBuildings :size="16" /> Mi Panel
+                  </router-link>
+                </template>
+
                 <div
                   class="border-t mt-1"
                   :class="theme.theme === 'dark' ? 'border-[#242C3D]' : 'border-gray-100'"
                 ></div>
                 <button
                   @click="handleLogout"
-                  class="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-400 transition-colors"
+                  class="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-red-400 transition-colors"
                   :class="theme.theme === 'dark' ? 'hover:bg-red-500/10' : 'hover:bg-red-50'"
                 >
-                  <PhSignOut :size="14" /> Cerrar sesión
+                  <PhSignOut :size="16" /> Cerrar sesión
                 </button>
               </div>
             </div>
@@ -214,27 +261,27 @@ function handleLogout() {
         <div class="flex md:hidden items-center gap-2">
           <button
             @click="theme.toggle()"
-            class="p-2 rounded-md transition-colors"
+            class="p-2 rounded-md transition-colors min-h-[44px]"
             :class="
               theme.theme === 'dark'
                 ? 'text-[#9CA3AF] hover:text-[#F3F4F6]'
                 : 'text-gray-500 hover:text-gray-900'
             "
           >
-            <PhSun v-if="theme.theme === 'dark'" :size="17" />
-            <PhMoon v-else :size="17" />
+            <PhSun v-if="theme.theme === 'dark'" :size="20" />
+            <PhMoon v-else :size="20" />
           </button>
           <button
             @click="mobileOpen = !mobileOpen"
-            class="p-2 rounded-md transition-colors"
+            class="p-2 rounded-md transition-colors min-h-[44px]"
             :class="
               theme.theme === 'dark'
                 ? 'text-[#9CA3AF] hover:text-[#F3F4F6] hover:bg-white/5'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
             "
           >
-            <PhX v-if="mobileOpen" :size="20" />
-            <PhList v-else :size="20" />
+            <PhX v-if="mobileOpen" :size="24" />
+            <PhList v-else :size="24" />
           </button>
         </div>
       </div>
@@ -251,42 +298,61 @@ function handleLogout() {
       "
     >
       <template v-if="auth.isAuthenticated">
-        <router-link
-          to="/panel"
-          @click="mobileOpen = false"
-          class="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium"
-          :class="
-            theme.theme === 'dark'
-              ? 'text-[#F3F4F6] hover:bg-white/5'
-              : 'text-gray-700 hover:bg-gray-100'
-          "
-        >
-          <PhUser :size="16" /> Mi Perfil
-        </router-link>
-        <router-link
-          to="/empleos"
-          @click="mobileOpen = false"
-          class="flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium"
-          :class="
-            theme.theme === 'dark'
-              ? 'text-[#F3F4F6] hover:bg-white/5'
-              : 'text-gray-700 hover:bg-gray-100'
-          "
-        >
-          <PhMagnifyingGlass :size="16" /> Ofertas
-        </router-link>
+        <template v-if="!auth.user?.role || auth.user.role === 'candidate'">
+          <router-link
+            to="/panel"
+            @click="mobileOpen = false"
+            class="flex items-center gap-2 px-3 py-3 min-h-[44px] rounded-md text-base font-medium"
+            :class="
+              theme.theme === 'dark'
+                ? 'text-[#F3F4F6] hover:bg-white/5'
+                : 'text-gray-700 hover:bg-gray-100'
+            "
+          >
+            <PhUser :size="20" /> Mi Perfil
+          </router-link>
+          <router-link
+            to="/empleos"
+            @click="mobileOpen = false"
+            class="flex items-center gap-2 px-3 py-3 min-h-[44px] rounded-md text-base font-medium"
+            :class="
+              theme.theme === 'dark'
+                ? 'text-[#F3F4F6] hover:bg-white/5'
+                : 'text-gray-700 hover:bg-gray-100'
+            "
+          >
+            <PhMagnifyingGlass :size="20" /> Ofertas
+          </router-link>
+        </template>
+        
+        <template v-if="auth.user?.role === 'company'">
+          <router-link
+            to="/panel"
+            @click="mobileOpen = false"
+            class="flex items-center gap-2 px-3 py-3 min-h-[44px] rounded-md text-base font-medium"
+            :class="
+              theme.theme === 'dark'
+                ? 'text-[#F3F4F6] hover:bg-white/5'
+                : 'text-gray-700 hover:bg-gray-100'
+            "
+          >
+            <PhBuildings :size="20" /> Mi Panel
+          </router-link>
+          <router-link v-for="link in [{ to: '/empresa/ofertas', label: 'Mis ofertas' }, { to: '/empresa/postulantes', label: 'Postulantes' }, { to: '/empresa/perfiles', label: 'Buscar perfiles' }]" :key="link.to" :to="link.to" @click="mobileOpen = false" class="flex items-center gap-2 px-3 py-3 min-h-[44px] rounded-md text-base font-medium" :class="theme.theme === 'dark' ? 'text-[#F3F4F6] hover:bg-white/5' : 'text-gray-700 hover:bg-gray-100'"><PhBriefcase :size="20" /> {{ link.label }}</router-link>
+        </template>
+
         <button
           @click="handleLogout"
-          class="flex items-center gap-2 w-full px-3 py-2.5 rounded-md text-sm text-red-400 font-medium"
+          class="flex items-center gap-2 w-full px-3 py-3 min-h-[44px] rounded-md text-base text-red-400 font-medium"
         >
-          <PhSignOut :size="16" /> Cerrar sesión
+          <PhSignOut :size="20" /> Cerrar sesión
         </button>
       </template>
       <template v-else>
         <router-link
           to="/login"
           @click="mobileOpen = false"
-          class="block px-3 py-2.5 rounded-md text-sm font-medium text-center btn-primary"
+          class="block px-3 py-3 min-h-[44px] rounded-md text-base font-medium text-center btn-primary"
         >
           Iniciar sesión
         </router-link>

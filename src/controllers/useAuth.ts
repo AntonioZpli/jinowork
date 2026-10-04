@@ -17,6 +17,14 @@ export function useAuth() {
     return success
   }
 
+  async function handleRegister(data: { role: 'candidate' | 'company', name: string, email: string, password: string, title?: string, location?: string, companyName?: string, industry?: string, companySize?: string, interests?: string[] }) {
+    const success = await store.register(data)
+    if (success) {
+      router.push('/panel')
+    }
+    return success
+  }
+
   function handleLogout() {
     store.logout()
     router.push('/')
@@ -29,6 +37,7 @@ export function useAuth() {
     isLoading: store.isLoading,
     userInitial: store.userInitial,
     handleLogin,
+    handleRegister,
     handleLogout,
     clearError: store.clearError,
   }

@@ -29,8 +29,8 @@ function validate(): boolean {
   }
   if (!password.value) {
     localErrors.value.password = 'Ingresa tu contraseña.'
-  } else if (password.value.length < 6) {
-    localErrors.value.password = 'Mínimo 6 caracteres.'
+  } else if (password.value.length < 4) {
+    localErrors.value.password = 'Mínimo 4 caracteres.'
   }
   return Object.keys(localErrors.value).length === 0
 }
@@ -47,7 +47,7 @@ async function submit() {
     class="min-h-[calc(100vh-64px)] flex items-center justify-center p-4"
     :class="theme.theme === 'dark' ? 'bg-[#0B0F19]' : 'bg-[#FAFAFA]'"
   >
-    <div class="w-full max-w-sm">
+    <div class="w-full max-w-md">
       <!-- Logo mark -->
       <div class="flex items-center gap-2.5 mb-8">
         <div class="w-8 h-8 rounded-md bg-[#3B82F6] flex items-center justify-center">
@@ -71,13 +71,13 @@ async function submit() {
         "
       >
         <h1
-          class="font-heading text-xl font-bold tracking-tight mb-1"
+          class="font-heading text-2xl font-bold tracking-tight mb-1"
           :class="theme.theme === 'dark' ? 'text-[#F3F4F6]' : 'text-gray-900'"
         >
           Iniciar sesión
         </h1>
         <p
-          class="text-xs mb-6"
+          class="text-sm mb-6"
           :class="theme.theme === 'dark' ? 'text-[#9CA3AF]' : 'text-gray-500'"
         >
           Ingresa tus credenciales para acceder a la plataforma.
@@ -86,7 +86,7 @@ async function submit() {
         <!-- Global auth error -->
         <div
           v-if="authError"
-          class="flex items-start gap-2.5 p-3 rounded-md border mb-5 text-xs"
+          class="flex items-start gap-2.5 p-3 rounded-md border mb-5 text-sm"
           :class="
             theme.theme === 'dark'
               ? 'bg-red-500/10 border-red-500/30 text-red-400'
@@ -102,7 +102,7 @@ async function submit() {
           <div>
             <label
               for="email"
-              class="block text-xs font-semibold mb-1.5"
+              class="block text-sm font-semibold mb-1.5"
               :class="theme.theme === 'dark' ? 'text-[#F3F4F6]' : 'text-gray-700'"
             >
               Correo electrónico
@@ -133,7 +133,7 @@ async function submit() {
             <div class="flex items-center justify-between mb-1.5">
               <label
                 for="password"
-                class="block text-xs font-semibold"
+                class="block text-sm font-semibold"
                 :class="theme.theme === 'dark' ? 'text-[#F3F4F6]' : 'text-gray-700'"
               >
                 Contraseña
@@ -198,7 +198,7 @@ async function submit() {
 
         <!-- Footer links -->
         <div
-          class="mt-5 pt-5 border-t text-center text-xs"
+          class="mt-5 pt-5 border-t text-center text-sm"
           :class="
             theme.theme === 'dark'
               ? 'border-[#242C3D] text-[#9CA3AF]'
@@ -206,19 +206,21 @@ async function submit() {
           "
         >
           ¿No tienes cuenta?
-          <a href="#" class="ml-1 font-semibold text-[#3B82F6] hover:text-[#2563EB] transition-colors">
+          <router-link to="/registro" class="ml-1 font-semibold text-[#3B82F6] hover:text-[#2563EB] transition-colors">
             Regístrate gratis
-          </a>
+          </router-link>
         </div>
       </div>
 
       <!-- Hint -->
-      <p
-        class="text-center text-xs mt-4"
-        :class="theme.theme === 'dark' ? 'text-[#9CA3AF]' : 'text-gray-400'"
+      <div
+        class="mt-4 rounded-lg border p-4 text-sm"
+        :class="theme.theme === 'dark' ? 'border-[#242C3D] bg-[#151A27] text-[#9CA3AF]' : 'border-gray-200 bg-white text-gray-500'"
       >
-        Demo: <span class="font-mono">yamir@jinowork.com</span> / <span class="font-mono">password123</span>
-      </p>
+        <p class="font-semibold mb-2">Credenciales de demostración</p>
+        <p>Candidato: <span class="font-mono">yamir@jinowork.com</span> / <span class="font-mono">1234</span></p>
+        <p class="mt-1">Empresa: <span class="font-mono">empresa@nicotech.com</span> / <span class="font-mono">1234</span></p>
+      </div>
     </div>
   </div>
 </template>

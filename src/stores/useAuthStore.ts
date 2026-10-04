@@ -1,40 +1,30 @@
 // ─── Pinia Store: Auth ───────────────────────────────────────────────────────
-// Handles authentication state with credentials for Yamir Zeledón (Linux & Backend specialist).
+// Handles authentication state
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { User } from '@/models/User'
+import type { JobApplication } from '@/models/Job'
 
 const MOCK_EMAIL = 'yamir@jinowork.com'
-const MOCK_PASSWORD = 'password123'
+const MOCK_PASSWORD = '1234'
 
 const DEMO_USER: User = {
   id: 1,
   name: 'Yamir Zeledón',
   email: 'yamir@jinowork.com',
   role: 'candidate',
-  title: 'Ingeniero Backend & DevOps | Linux & Terminal Power User',
+  professionalAreaId: 'technology',
+  specializationIds: ['backend', 'devops'],
+  experienceYears: 3,
+  skillIds: ['linux', 'bash', 'docker', 'go', 'python', 'node-js', 'postgresql', 'redis', 'nginx'],
+  skillLevels: { linux: 'Avanzado', docker: 'Avanzado', 'node-js': 'Intermedio', python: 'Intermedio' },
+  title: 'Ingeniero Backend & DevOps',
   location: 'Jinotega, Nicaragua',
-  about:
-    'Especialista en desarrollo backend, arquitectura de servidores y administración de sistemas Linux originario de Jinotega, Nicaragua. Apasionado por la eficiencia en la terminal, Neovim, automatización con scripts de Bash y el diseño de APIs robustas en Go, Python y Node.js. Con sólida experiencia desplegando servicios con Docker y NGINX, optimizando bases de datos PostgreSQL y gestionando infraestructura de alta disponibilidad tanto para proyectos locales e infraestructuras del norte de Nicaragua como para entornos cloud distribuidos.',
+  about: 'Especialista en desarrollo backend y administración de sistemas Linux.',
   avatar: 'https://i.pinimg.com/736x/23/70/03/2370031777c7a29d964afdbb39521e3e.jpg',
   available: true,
-  skills: [
-    'Linux',
-    'Terminal',
-    'Bash',
-    'Neovim',
-    'Docker',
-    'Go',
-    'Python',
-    'Node.js',
-    'PostgreSQL',
-    'Redis',
-    'NGINX',
-    'Git',
-    'Kubernetes',
-    'Rust',
-  ],
+  skills: ['Linux', 'Bash', 'Docker', 'Go', 'Python', 'Node.js', 'PostgreSQL', 'Redis', 'NGINX'],
   experience: [
     {
       id: 1,
@@ -46,56 +36,45 @@ const DEMO_USER: User = {
       startDate: 'Ene 2023',
       endDate: null,
       current: true,
-      description:
-        'Diseño y mantenimiento de infraestructura de servidores Linux en alta disponibilidad. Implementación de microservicios backend en Go y Python con Docker, automatización de tareas en terminal con Bash y gestión de bases de datos PostgreSQL.',
-    },
-    {
-      id: 2,
-      title: 'Ingeniero Backend & DevOps',
-      company: 'Café Las Brumas Tech / AgroTech Networks',
-      companyInitials: 'LB',
-      companyColor: '#059669',
-      location: 'Jinotega, Nicaragua',
-      startDate: 'Feb 2021',
-      endDate: 'Dic 2022',
-      current: false,
-      description:
-        'Desarrollo de APIs RESTful y pipelines de procesamiento en segundo plano con Redis y Node.js para monitoreo de centros de acopio y telemetría de estaciones meteorológicas en Jinotega y Matagalpa.',
-    },
-    {
-      id: 3,
-      title: 'Administrador de Sistemas & Backend Junior',
-      company: 'Telecom & Fibra Norte Nicaragua',
-      companyInitials: 'TN',
-      companyColor: '#D97706',
-      location: 'Jinotega, Nicaragua',
-      startDate: 'Jun 2019',
-      endDate: 'Ene 2021',
-      current: false,
-      description:
-        'Gestión de servidores Linux (Debian/Ubuntu), configuración de proxies inversos NGINX, scripts de monitoreo en terminal y soporte a redes en el departamento de Jinotega.',
-    },
+      description: 'Diseño y mantenimiento de infraestructura de servidores Linux en alta disponibilidad.'
+    }
   ],
   education: [
     {
       id: 1,
       degree: 'Ingeniería en Sistemas de Información',
-      institution: 'Universidad Nacional Autónoma de Nicaragua (UNAN - CUR Jinotega)',
+      institution: 'UNAN',
       year: '2019',
-      field: 'Especialización en Redes, Sistemas Operativos y Backend',
-    },
-    {
-      id: 2,
-      degree: 'Certificación Profesional Linux SysAdmin & Cloud Containers',
-      institution: 'Linux Foundation & UNI Managua',
-      year: '2021',
-      field: 'GNU/Linux Kernel, CLI & Docker Architecture',
-    },
+      field: 'Backend'
+    }
   ],
   languages: [
     { id: 1, language: 'Español', level: 'Nativo' },
     { id: 2, language: 'Inglés', level: 'Avanzado' },
   ],
+  interests: ['Tecnología', 'Ingeniería'],
+  preferredCategories: ['Tecnología']
+}
+
+const DEMO_COMPANY_USER: User = {
+  id: 2,
+  name: 'María López',
+  email: 'empresa@nicotech.com',
+  role: 'company',
+  title: 'Directora general',
+  location: 'Managua, Nicaragua',
+  companyName: 'NicaTech Solutions',
+  companySize: '11-50', 
+  industry: 'Tecnología',
+  about: 'Empresa de desarrollo de software...', 
+  avatar: '', 
+  available: false,
+  skills: [], 
+  experience: [{ id: 1, title: 'Ingeniero backend y administrador Linux', company: 'NicaSys Infrastructure', companyInitials: 'NS', companyColor: '#0284C7', location: 'Jinotega, Nicaragua', startDate: 'Ene 2023', endDate: null, current: true, description: 'Diseño y mantenimiento de servicios backend e infraestructura Linux.' }],
+  education: [{ id: 1, degree: 'Ingeniería en Sistemas de Información', institution: 'UNAN', year: '2019', field: 'Sistemas' }],
+  department: 'Jinotega', municipality: 'Jinotega', preferredModality: 'Híbrido',
+  preferredEmploymentTypes: ['Tiempo completo'], preferredLocations: ['Jinotega'],
+  languages: []
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -103,8 +82,16 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = ref(false)
   const authError = ref<string | null>(null)
   const isLoading = ref(false)
-  const applications = ref<number[]>([])
-  const applicationNotes = ref<Record<number, string>>({})
+  const candidates = ref<User[]>([DEMO_USER])
+  const applicationRecords = ref<JobApplication[]>([
+    { id: 1, jobId: 36, candidateId: DEMO_USER.id, candidate: DEMO_USER, note: 'Tengo experiencia desarrollando servicios y aplicaciones web.', appliedAt: '2026-09-29T09:00:00.000Z', status: 'submitted', profileSnapshot: { areaId: 'technology', specializationIds: ['backend', 'devops'], skillIds: ['linux', 'bash', 'docker', 'go', 'python', 'node-js', 'postgresql', 'redis', 'nginx'], experienceYears: 3, education: DEMO_USER.education || [] } },
+  ])
+  const applications = computed(() => user.value?.role === 'candidate'
+    ? applicationRecords.value.filter(record => record.candidateId === user.value?.id).map(record => record.jobId)
+    : [])
+  const applicationNotes = computed(() => Object.fromEntries(applicationRecords.value
+    .filter(record => record.candidateId === user.value?.id)
+    .map(record => [record.jobId, record.note])))
 
   const userInitial = computed(() =>
     user.value?.name ? user.value.name.charAt(0).toUpperCase() : 'Y',
@@ -114,16 +101,18 @@ export const useAuthStore = defineStore('auth', () => {
     authError.value = null
     isLoading.value = true
 
-    // Simulate async API call
     await new Promise((resolve) => setTimeout(resolve, 500))
 
     const normalizedEmail = email.trim().toLowerCase()
-    // Accept yamir@jinowork.com, carlos@jinowork.com or any username at jinowork.com with password123
-    const isValidUser =
-      (normalizedEmail === MOCK_EMAIL ||
-       normalizedEmail === 'carlos@jinowork.com' ||
-       normalizedEmail.startsWith('yamir')) &&
-      password === MOCK_PASSWORD
+    
+    if (normalizedEmail === DEMO_COMPANY_USER.email && password === MOCK_PASSWORD) {
+      user.value = DEMO_COMPANY_USER
+      isAuthenticated.value = true
+      isLoading.value = false
+      return true
+    }
+
+    const isValidUser = (normalizedEmail === MOCK_EMAIL || normalizedEmail.startsWith('yamir')) && password === MOCK_PASSWORD
 
     if (isValidUser) {
       user.value = DEMO_USER
@@ -137,6 +126,38 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function register(data: { role: 'candidate' | 'company', name: string, email: string, password: string, title?: string, location?: string, companyName?: string, industry?: string, companySize?: string, interests?: string[] }): Promise<boolean> {
+    authError.value = null
+    isLoading.value = true
+    
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    user.value = {
+      id: Math.floor(Math.random() * 1000) + 3,
+      name: data.name,
+      email: data.email,
+      role: data.role,
+      title: data.title,
+      location: data.location,
+      companyName: data.companyName,
+      industry: data.industry,
+      companySize: data.companySize,
+      available: data.role === 'candidate',
+      secondaryAreaIds: [], specializationIds: [], skillIds: [], skillLevels: {}, experienceYears: 0,
+      interests: data.role === 'candidate' ? [...(data.interests || [])] : [],
+      preferredCategories: data.role === 'candidate' ? [...(data.interests || [])] : [],
+      skills: [],
+      experience: [],
+      education: [],
+      languages: []
+    }
+    if (data.role === 'candidate' && user.value) candidates.value = [...candidates.value, user.value]
+    
+    isAuthenticated.value = true
+    isLoading.value = false
+    return true
+  }
+
   function logout() {
     user.value = null
     isAuthenticated.value = false
@@ -148,12 +169,35 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function updateProfile(updates: Partial<User>) {
-    if (user.value) user.value = { ...user.value, ...updates }
+    if (user.value) {
+      const updatedUser = { ...user.value, ...updates }
+      user.value = updatedUser
+      if (updatedUser.role === 'candidate') {
+        candidates.value = candidates.value.map(candidate => candidate.id === updatedUser.id ? updatedUser : candidate)
+      }
+    }
   }
 
   function applyToJob(jobId: number, note = '') {
-    if (!applications.value.includes(jobId)) applications.value = [...applications.value, jobId]
-    applicationNotes.value = { ...applicationNotes.value, [jobId]: note }
+    if (user.value?.role !== 'candidate') return
+    const candidate = user.value?.role === 'candidate' ? user.value : null
+    if (candidate && !applicationRecords.value.some(record => record.jobId === jobId && record.candidateId === candidate.id)) {
+      const profileSnapshot = {
+        areaId: candidate.professionalAreaId,
+        specializationIds: [...(candidate.specializationIds || [])],
+        skillIds: [...(candidate.skillIds || candidate.skills || [])],
+        experienceYears: candidate.experienceYears || 0,
+        education: [...(candidate.education || [])],
+      }
+      applicationRecords.value = [...applicationRecords.value, {
+        id: Date.now(), jobId, candidateId: candidate.id, candidate: { ...candidate }, note,
+        appliedAt: new Date().toISOString(), status: 'submitted', profileSnapshot,
+      }]
+    }
+  }
+
+  function updateApplicationStatus(applicationId: number, status: JobApplication['status']) {
+    applicationRecords.value = applicationRecords.value.map(application => application.id === applicationId ? { ...application, status } : application)
   }
 
   return {
@@ -163,11 +207,15 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading,
     userInitial,
     login,
+    register,
     logout,
     clearError,
     applications,
+    applicationRecords,
+    candidates,
     applicationNotes,
     updateProfile,
     applyToJob,
+    updateApplicationStatus,
   }
 })
