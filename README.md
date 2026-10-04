@@ -448,7 +448,7 @@ Proyecto actualmente en desarrollo y destinado a fines académicos/prototipo...
 ## Autores
 
 **Eythan, Diego y yo**
-(https://i.pinimg.com/736x/a3/3a/22/a33a2285afc37b5fc5d2e83a0a9b814e.jpg)
+![equipo](https://i.pinimg.com/736x/a3/3a/22/a33a2285afc37b5fc5d2e83a0a9b814e.jpg)
 
 Proyecto: **Jinowork**
 
